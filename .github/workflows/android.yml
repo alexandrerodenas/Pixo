@@ -27,7 +27,7 @@ jobs:
         with:
           distribution: temurin
           java-version: 21
-      - uses: android-actions/setup-android@v3
+      # The Android SDK is preinstalled on ubuntu-latest (ANDROID_HOME); Gradle fetches missing platforms.
       - run: npm ci
       - run: npm run android:sync
       - name: Build debug APK
