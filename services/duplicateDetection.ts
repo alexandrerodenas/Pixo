@@ -5,6 +5,8 @@ import { getTF } from './api.ts';
 // Similarity threshold for considering two photos as duplicates
 // 0.98 is very strict (near exact), 0.92 handles slight bursts/crops.
 const DUPLICATE_THRESHOLD = 0.94;
+// Rows of the similarity matrix computed at once
+const SIMILARITY_BLOCK_ROWS = 256;
 
 export const findDuplicateGroups = async (photos: Photo[]): Promise<DuplicateGroup[]> => {
   const analyzedPhotos = photos.filter(p => p.status === PhotoStatus.ANALYZED && p.embedding && p.embedding.length > 0);
@@ -13,83 +15,88 @@ export const findDuplicateGroups = async (photos: Photo[]): Promise<DuplicateGro
 
   const tf = await getTF();
 
-  return tf.tidy(() => {
-    const count = analyzedPhotos.length;
-    const embeddingSize = analyzedPhotos[0].embedding!.length;
+  const count = analyzedPhotos.length;
+  const embeddingSize = analyzedPhotos[0].embedding!.length;
 
-    // 1. Create a Tensor of all embeddings [N, 1024]
-    // Flatten the arrays
-    const flatEmbeddings = new Float32Array(count * embeddingSize);
-    analyzedPhotos.forEach((p, i) => {
-      flatEmbeddings.set(p.embedding!, i * embeddingSize);
-    });
+  // 1. Flatten all embeddings [N, D] and normalize them to unit length (L2),
+  // so a dot product is the cosine similarity.
+  const flatEmbeddings = new Float32Array(count * embeddingSize);
+  analyzedPhotos.forEach((p, i) => {
+    flatEmbeddings.set(p.embedding!, i * embeddingSize);
+  });
+  const normalizedEmbeddings = tf.tidy(() => {
+    const matrix = tf.tensor2d(flatEmbeddings, [count, embeddingSize]);
+    return matrix.div(matrix.norm('euclidean', 1, true));
+  });
 
-    const embeddingMatrix = tf.tensor2d(flatEmbeddings, [count, embeddingSize]);
+  // 2. Grouping Logic using Disjoint Set (Union-Find)
+  const parent = new Array(count).fill(0).map((_, i) => i);
 
-    // 2. Normalize embeddings to unit length (L2 norm)
-    // This ensures Dot Product = Cosine Similarity
-    const norms = embeddingMatrix.norm('euclidean', 1, true);
-    const normalizedEmbeddings = embeddingMatrix.div(norms);
+  function find(i: number): number {
+    if (parent[i] === i) return i;
+    parent[i] = find(parent[i]);
+    return parent[i];
+  }
 
-    // 3. Compute Similarity Matrix [N, N] using Matrix Multiplication
-    // Sim(A, B) = A . B (since normalized)
-    const similarityMatrix = tf.matMul(normalizedEmbeddings, normalizedEmbeddings, false, true);
-
-    // 4. Extract data to CPU for grouping logic
-    const similarityValues = similarityMatrix.dataSync(); // Float32Array
-
-    // 5. Grouping Logic using Disjoint Set (Union-Find)
-    const parent = new Array(count).fill(0).map((_, i) => i);
-
-    function find(i: number): number {
-      if (parent[i] === i) return i;
-      parent[i] = find(parent[i]);
-      return parent[i];
+  function union(i: number, j: number) {
+    const rootI = find(i);
+    const rootJ = find(j);
+    if (rootI !== rootJ) {
+      parent[rootJ] = rootI;
     }
+  }
 
-    function union(i: number, j: number) {
-      const rootI = find(i);
-      const rootJ = find(j);
-      if (rootI !== rootJ) {
-        parent[rootJ] = rootI;
-      }
-    }
+  // 3. Compute the similarity matrix one block of rows at a time ([B, N] instead of [N, N]),
+  // so memory stays bounded (10,000 photos: ~10 MB per block instead of 400 MB at once).
+  try {
+    for (let start = 0; start < count; start += SIMILARITY_BLOCK_ROWS) {
+      const rows = Math.min(SIMILARITY_BLOCK_ROWS, count - start);
+      const blockValues = tf.tidy(() => {
+        const block = normalizedEmbeddings.slice([start, 0], [rows, embeddingSize]);
+        return tf.matMul(block, normalizedEmbeddings, false, true).dataSync() as Float32Array;
+      });
 
-    // Iterate upper triangle of the matrix
-    for (let i = 0; i < count; i++) {
-      for (let j = i + 1; j < count; j++) {
-        const score = similarityValues[i * count + j];
-        if (score >= DUPLICATE_THRESHOLD) {
-          union(i, j);
+      // Upper triangle only: compare row i with every later photo j
+      for (let r = 0; r < rows; r++) {
+        const i = start + r;
+        for (let j = i + 1; j < count; j++) {
+          if (blockValues[r * count + j] >= DUPLICATE_THRESHOLD) {
+            union(i, j);
+          }
         }
       }
+      // Let the UI breathe between blocks
+      await new Promise(resolve => setTimeout(resolve, 0));
     }
+  } finally {
+    normalizedEmbeddings.dispose();
+  }
 
-    // 6. Build Groups
-    const groupsMap = new Map<number, string[]>();
-    for (let i = 0; i < count; i++) {
-      const root = find(i);
-      if (!groupsMap.has(root)) {
-        groupsMap.set(root, []);
-      }
-      groupsMap.get(root)!.push(analyzedPhotos[i].id);
+  // 4. Build Groups
+  const groupsMap = new Map<number, string[]>();
+  for (let i = 0; i < count; i++) {
+    const root = find(i);
+    if (!groupsMap.has(root)) {
+      groupsMap.set(root, []);
     }
+    groupsMap.get(root)!.push(analyzedPhotos[i].id);
+  }
 
-    // Filter out groups with only 1 photo
-    const groups: DuplicateGroup[] = [];
-    for (const [_, photoIds] of groupsMap.entries()) {
-      if (photoIds.length > 1) {
-        groups.push(createDuplicateGroup(photoIds, photos));
-      }
+  // Filter out groups with only 1 photo
+  const photosById = new Map(photos.map(p => [p.id, p]));
+  const groups: DuplicateGroup[] = [];
+  for (const photoIds of groupsMap.values()) {
+    if (photoIds.length > 1) {
+      groups.push(createDuplicateGroup(photoIds, photosById));
     }
+  }
 
-    return groups;
-  });
+  return groups;
 };
 
 // Helper to determine the "Best" photo in a group
-function createDuplicateGroup(photoIds: string[], allPhotos: Photo[]): DuplicateGroup {
-  const groupPhotos = photoIds.map(id => allPhotos.find(p => p.id === id)!).filter(Boolean);
+function createDuplicateGroup(photoIds: string[], photosById: Map<string, Photo>): DuplicateGroup {
+  const groupPhotos = photoIds.map(id => photosById.get(id)!).filter(Boolean);
 
   // Sort criteria:
   // 1. Resolution (Area) Descending

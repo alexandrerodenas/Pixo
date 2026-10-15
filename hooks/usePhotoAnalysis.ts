@@ -5,6 +5,11 @@ import { PhotoStatus } from '../services/types.ts';
 import * as api from '../services/api.ts';
 
 
+type PhotoPatch = (photo: Photo | undefined) => Photo | undefined;
+
+const MAX_CONCURRENT_ANALYSES = 3; // To prevent browser from freezing
+const FLUSH_INTERVAL_MS = 250; // Analysis results are applied to state in batches
+
 export const usePhotoAnalysis = (
     photos: Map<string, Photo>,
     setPhotos: React.Dispatch<React.SetStateAction<Map<string, Photo>>>,
@@ -13,15 +18,49 @@ export const usePhotoAnalysis = (
 ) => {
   const [tfBackend, setTfBackend] = useState<string | null>(null);
   const [modelsLoadState, setModelsLoadState] = useState<ModelsLoadState>({ classification: 'idle', detection: 'idle' });
-  const analysisQueueRef = useRef<string[]>([]);
-  const isAnalyzingRef = useRef<boolean>(false);
-  const MAX_CONCURRENT_ANALYSES = 3; // To prevent browser from freezing
+
+  const photosRef = useRef(photos);
+  photosRef.current = photos;
+  const applyRulesRef = useRef(applyRules);
+  applyRulesRef.current = applyRules;
+
+  const queueRef = useRef<string[]>([]);
+  // Blob URLs already queued; unique per directory load, so re-opening the same folder re-queues it.
+  const enqueuedRef = useRef<Set<string>>(new Set());
+  const activeCountRef = useRef(0);
+  const pendingPatchesRef = useRef<Array<[string, PhotoPatch]>>([]);
+  const flushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Preload models and subscribe to their loading status on mount
   useEffect(() => {
     api.preloadModels();
     const unsubscribe = api.subscribeToModelStatus(setModelsLoadState);
     return () => unsubscribe(); // Cleanup on unmount
+  }, []);
+
+  // Apply all pending patches with a single Map copy instead of one copy per photo update.
+  const flushPatches = useCallback(() => {
+    flushTimerRef.current = null;
+    const patches = pendingPatchesRef.current;
+    if (patches.length === 0) return;
+    pendingPatchesRef.current = [];
+    setPhotos(prev => {
+      const next = new Map(prev);
+      for (const [id, patch] of patches) {
+        const updated = patch(next.get(id));
+        if (updated) next.set(id, updated);
+      }
+      return next;
+    });
+  }, [setPhotos]);
+
+  const queuePatch = useCallback((id: string, patch: PhotoPatch) => {
+    pendingPatchesRef.current.push([id, patch]);
+    if (!flushTimerRef.current) flushTimerRef.current = setTimeout(flushPatches, FLUSH_INTERVAL_MS);
+  }, [flushPatches]);
+
+  useEffect(() => () => {
+    if (flushTimerRef.current) clearTimeout(flushTimerRef.current);
   }, []);
 
   // Effect to re-evaluate blur levels when user profile thresholds change
@@ -51,15 +90,17 @@ export const usePhotoAnalysis = (
   }, [userProfileRef.current?.blurThreshold, userProfileRef.current?.sharpThreshold, setPhotos]);
 
   const analyzePhoto = useCallback(async (photoId: string) => {
-    const photoToAnalyze = photos.get(photoId);
+    const photoToAnalyze = photosRef.current.get(photoId);
     if (!photoToAnalyze) return;
+    const { objectURL } = photoToAnalyze;
+    // Ignore results for a photo that was removed or reloaded (same path, new blob URL) meanwhile.
+    const isSamePhoto = (p: Photo | undefined): p is Photo => !!p && p.objectURL === objectURL;
 
-    // Immediately update status to ANALYZING in the UI
-    setPhotos(prev => new Map(prev).set(photoId, { ...prev.get(photoId)!, status: PhotoStatus.ANALYZING }));
+    queuePatch(photoId, p => isSamePhoto(p) ? { ...p, status: PhotoStatus.ANALYZING } : p);
 
     try {
       // Hand the file to the worker as a Blob: no base64 data URL on the main thread.
-      const fileBlob = await (await fetch(photoToAnalyze.objectURL)).blob();
+      const fileBlob = await (await fetch(objectURL)).blob();
 
       const blurThreshold = userProfileRef.current?.blurThreshold ?? 100;
       const sharpThreshold = userProfileRef.current?.sharpThreshold ?? 300;
@@ -71,8 +112,6 @@ export const usePhotoAnalysis = (
         blurThreshold,
         sharpThreshold,
       });
-
-      if (!tfBackend) setTfBackend(api.getTfBackend());
 
       const threshold = userProfileRef.current?.unknownThreshold ?? 10;
       const isUncategorized = result.classifications.length === 0 || result.classifications.every(p => (p.score * 100) < threshold);
@@ -95,97 +134,74 @@ export const usePhotoAnalysis = (
 
       const thumbnailURL = result.thumbnail ? URL.createObjectURL(result.thumbnail) : undefined;
 
-      setPhotos(prev => {
-        const newPhotos = new Map(prev);
-        const currentPhoto = newPhotos.get(photoId);
-        if (currentPhoto) {
-          const finalStatus = isUncategorized ? PhotoStatus.UNCATEGORIZED : PhotoStatus.ANALYZED;
-          const updatedPhoto: Photo = {
-            ...currentPhoto,
-            status: finalStatus,
-            classifications: result.classifications,
-            detections: result.detections,
-            embedding: result.embedding,
-            blurScore: result.blurScore,
-            blurRaw: result.blurRaw,
-            blurLevel: result.blurLevel,
-            metadata: { ...result.metadata, size: fileBlob.size, lastModified: Date.now() },
-            customLabel: matchedCustomLabel,
-            thumbnailURL,
-          };
-
-          if (updatedPhoto.status === PhotoStatus.ANALYZED && userProfileRef.current?.autoApplyRules) {
-            const classificationMatches = applyRules(updatedPhoto.classifications, userProfileRef.current.classificationRules);
-            const detectionMatches = applyRules(updatedPhoto.detections, userProfileRef.current.detectionRules);
-
-            if (classificationMatches.length > 0 || detectionMatches.length > 0) {
-              updatedPhoto.selected = true;
-              updatedPhoto.matchedRules = {
-                classification: classificationMatches,
-                detection: detectionMatches,
-              };
-            }
-          }
-          newPhotos.set(photoId, updatedPhoto);
-        } else if (thumbnailURL) {
-          // The photo was deleted or moved while it was being analyzed
-          URL.revokeObjectURL(thumbnailURL);
+      queuePatch(photoId, currentPhoto => {
+        if (!isSamePhoto(currentPhoto)) {
+          // The photo was deleted, moved or reloaded while it was being analyzed
+          if (thumbnailURL) URL.revokeObjectURL(thumbnailURL);
+          return currentPhoto;
         }
-        return newPhotos;
+        const finalStatus = isUncategorized ? PhotoStatus.UNCATEGORIZED : PhotoStatus.ANALYZED;
+        const updatedPhoto: Photo = {
+          ...currentPhoto,
+          status: finalStatus,
+          classifications: result.classifications,
+          detections: result.detections,
+          embedding: result.embedding,
+          blurScore: result.blurScore,
+          blurRaw: result.blurRaw,
+          blurLevel: result.blurLevel,
+          metadata: { ...result.metadata, size: fileBlob.size, lastModified: Date.now() },
+          customLabel: matchedCustomLabel,
+          thumbnailURL,
+        };
+        if (updatedPhoto.status === PhotoStatus.ANALYZED && userProfileRef.current?.autoApplyRules) {
+          const classificationMatches = applyRulesRef.current(updatedPhoto.classifications, userProfileRef.current.classificationRules);
+          const detectionMatches = applyRulesRef.current(updatedPhoto.detections, userProfileRef.current.detectionRules);
+          if (classificationMatches.length > 0 || detectionMatches.length > 0) {
+            updatedPhoto.selected = true;
+            updatedPhoto.matchedRules = {
+              classification: classificationMatches,
+              detection: detectionMatches,
+            };
+          }
+        }
+        return updatedPhoto;
       });
     } catch (error) {
       console.error(`Failed to analyze ${photoId}:`, error);
-      setPhotos(prev => new Map(prev).set(photoId, { ...prev.get(photoId)!, status: PhotoStatus.ERROR, classifications: [], detections: [] }));
+      queuePatch(photoId, p => isSamePhoto(p) ? { ...p, status: PhotoStatus.ERROR, classifications: [], detections: [] } : p);
     }
-  }, [photos, setPhotos, tfBackend, userProfileRef, applyRules]);
-
-  const processQueue = useCallback(async () => {
-    if (analysisQueueRef.current.length === 0) {
-      isAnalyzingRef.current = false;
-      return;
-    }
-
-    isAnalyzingRef.current = true;
-    const photoId = analysisQueueRef.current.shift();
-    if (photoId) {
-      await analyzePhoto(photoId);
-    }
-
-    // Process next item recursively
-    processQueue();
-  }, [analyzePhoto]);
-
-  // Effect to manage the analysis queue
-  useEffect(() => {
-    const queuedPhotos = Array.from(photos.values())
-        .filter(p => p.status === PhotoStatus.QUEUED)
-        .map(p => p.id);
-
-    if (queuedPhotos.length > 0) {
-      analysisQueueRef.current.push(...queuedPhotos);
-      // Mark them as "in queue" to avoid re-adding
-      setPhotos(prev => {
-        const newPhotos = new Map(prev);
-        queuedPhotos.forEach(id => {
-          const photo = newPhotos.get(id);
-          // A bit of a hack: use a temporary status to prevent re-queueing
-          // The analysis function will set it to ANALYZING properly.
-          if (photo) newPhotos.set(id, {...photo, status: 'IN_QUEUE_INTERNAL' as any});
-        });
-        return newPhotos;
+  }, [queuePatch, userProfileRef]);
+  // Fixed-size pool: at most MAX_CONCURRENT_ANALYSES photos are in flight at any time.
+  const pump = useCallback(() => {
+    while (activeCountRef.current < MAX_CONCURRENT_ANALYSES && queueRef.current.length > 0) {
+      const photoId = queueRef.current.shift()!;
+      activeCountRef.current++;
+      analyzePhoto(photoId).finally(() => {
+        activeCountRef.current--;
+        pump();
       });
     }
+  }, [analyzePhoto]);
 
-    // Start processing if not already running
-    const activeWorkers = Array.from(photos.values()).filter(p => p.status === PhotoStatus.ANALYZING).length;
-    const slotsToFill = MAX_CONCURRENT_ANALYSES - activeWorkers;
-
-    for (let i = 0; i < slotsToFill; i++) {
-      if (analysisQueueRef.current.length > 0) {
-        processQueue();
+  // Queue newly loaded photos
+  useEffect(() => {
+    let added = false;
+    for (const photo of photos.values()) {
+      if (photo.status === PhotoStatus.QUEUED && !enqueuedRef.current.has(photo.objectURL)) {
+        enqueuedRef.current.add(photo.objectURL);
+        queueRef.current.push(photo.id);
+        added = true;
       }
     }
-  }, [photos, processQueue, setPhotos]);
+    if (added) pump();
+  }, [photos, pump]);
+
+  useEffect(() => {
+    if (tfBackend) return;
+    const backend = api.getTfBackend();
+    if (backend) setTfBackend(backend);
+  }, [photos, tfBackend]);
 
   return { tfBackend, modelsLoadState };
 };

@@ -3,6 +3,9 @@ import type { Photo } from '../services/types.ts';
 import { PhotoStatus } from '../services/types.ts';
 import { revokePhotoURLs } from '../services/photoUrls.ts';
 
+// Parallel file-system operations (deletions)
+const MAX_CONCURRENT_FS_OPS = 8;
+
 // Helper to recursively delete a file by its relative path from a directory handle
 async function deleteFileByPath(dirHandle: FileSystemDirectoryHandle, path: string): Promise<boolean> {
   const pathParts = path.split('/');
@@ -152,27 +155,30 @@ export const useFileSystem = (
 
     setStatusMessage(`Deleting ${photosToDelete.length} photo(s)...`);
 
-    // Optimistically remove from UI
+    // Delete a few files at a time, then remove from the UI only those really deleted,
+    // so a failed deletion stays visible instead of silently disappearing.
+    const deleted: Photo[] = [];
+    const queue = [...photosToDelete];
+    const deleteNext = async (): Promise<void> => {
+      const p = queue.shift();
+      if (!p) return;
+      if (await deleteFileByPath(directoryHandleRef.current!, p.id)) deleted.push(p);
+      return deleteNext();
+    };
+    await Promise.all(Array.from({ length: Math.min(MAX_CONCURRENT_FS_OPS, queue.length) }, deleteNext));
+
+    const deletedIds = new Set(deleted.map(p => p.id));
     setPhotos(prevPhotos => {
       const newPhotos = new Map(prevPhotos);
-      photosToDelete.forEach(p => newPhotos.delete(p.id));
+      deletedIds.forEach(id => newPhotos.delete(id));
       return newPhotos;
     });
+    deleted.forEach(revokePhotoURLs);
 
-    let deletedCount = 0;
-    await Promise.all(photosToDelete.map(async (p) => {
-      const success = await deleteFileByPath(directoryHandleRef.current!, p.id);
-      if (success) {
-        revokePhotoURLs(p); // Clean up blob URLs
-        deletedCount++;
-      }
-    }));
-
-    if (deletedCount < photosToDelete.length) {
-      setStatusMessage(`Deleted ${deletedCount} of ${photosToDelete.length} photos. Some deletions failed.`);
-      // Potentially add back photos that failed to delete, or prompt user to reload.
+    if (deleted.length < photosToDelete.length) {
+      setStatusMessage(`Deleted ${deleted.length} of ${photosToDelete.length} photos. ${photosToDelete.length - deleted.length} could not be deleted and are still shown.`);
     } else {
-      setStatusMessage(`Successfully deleted ${deletedCount} photos. ✅`);
+      setStatusMessage(`Successfully deleted ${deleted.length} photos. ✅`);
     }
   }, [directoryHandleRef, setPhotos, setStatusMessage]);
 
@@ -280,7 +286,7 @@ export const useFileSystem = (
   useEffect(() => {
     const photoArray = Array.from(photos.values());
     const total = photoArray.length;
-    const processed = photoArray.filter(p => p.status !== PhotoStatus.QUEUED).length;
+    const processed = photoArray.filter(p => p.status !== PhotoStatus.QUEUED && p.status !== PhotoStatus.ANALYZING).length;
 
     if (total > 0 && processed === total && isLoading) {
       setIsLoading(false);

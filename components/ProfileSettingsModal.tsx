@@ -4,6 +4,7 @@ import type { UserProfile } from '../services/types.ts';
 import { ProfileEditor } from './ProfileEditor.tsx';
 import { RulesManager } from './RulesManager.tsx';
 import { CustomLabelsManager } from './CustomLabelsManager.tsx';
+import { parseImportedProfile } from '../services/profileImport.ts';
 import { User, X, Wand2, Settings, Save, Upload, Download, Tags } from 'lucide-react';
 
 interface ProfileSettingsModalProps {
@@ -70,36 +71,21 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ isOpen, onC
         if (typeof text !== 'string') {
           throw new Error("Failed to read file content.");
         }
-        const importedProfile = JSON.parse(text);
-
-        if (importedProfile.rules && !importedProfile.classificationRules) {
-          importedProfile.classificationRules = importedProfile.rules;
-          delete importedProfile.rules;
-        }
-        if (!importedProfile.classificationRules) importedProfile.classificationRules = [];
-        if (!importedProfile.detectionRules) importedProfile.detectionRules = [];
-        if (!importedProfile.customLabels) importedProfile.customLabels = [];
-
-        const isValid = typeof importedProfile.firstName === 'string' &&
-            Array.isArray(importedProfile.classificationRules) &&
-            Array.isArray(importedProfile.detectionRules) &&
-            Array.isArray(importedProfile.customLabels) &&
-            typeof importedProfile.autoApplyRules === 'boolean';
-
-        if (isValid) {
-          const newProfileState: UserProfile = {
-            ...userProfile,
-            ...importedProfile,
-            unknownThreshold: importedProfile.unknownThreshold ?? 10,
-            thumbnailSize: importedProfile.thumbnailSize ?? 'M',
-            savedFolderName: importedProfile.savedFolderName || 'saves',
-            savedOperation: importedProfile.savedOperation || 'move',
-          };
-          setEditedProfile(newProfileState);
-          alert("Profile imported successfully! Review the changes and click 'Save Changes' to apply them.");
-        } else {
+        const importedProfile = parseImportedProfile(JSON.parse(text));
+        if (!importedProfile) {
           throw new Error("Invalid profile file format.");
         }
+
+        const newProfileState: UserProfile = {
+          ...userProfile,
+          ...importedProfile,
+          unknownThreshold: importedProfile.unknownThreshold ?? 10,
+          thumbnailSize: importedProfile.thumbnailSize ?? 'M',
+          savedFolderName: importedProfile.savedFolderName || 'saves',
+          savedOperation: importedProfile.savedOperation || 'move',
+        };
+        setEditedProfile(newProfileState);
+        alert("Profile imported successfully! Review the changes and click 'Save Changes' to apply them.");
       } catch (error) {
         console.error("Failed to import profile:", error);
         alert("Failed to import profile. Please make sure it's a valid JSON file exported from this application.");

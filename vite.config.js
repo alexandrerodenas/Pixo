@@ -1,8 +1,8 @@
 import { defineConfig } from 'vite'
 
 // Content-Security-Policy for the production build. The page holds read/write access to the
-// user's photo folder, so only our own scripts may run. Keep in sync with nginx.conf
-// (which adds frame-ancestors, not allowed in a <meta> tag).
+// user's photo folder, so only our own scripts may run. Keep in sync with security-headers.inc
+// (nginx) and vercel.json, which also send frame-ancestors (not allowed in a <meta> tag).
 // Model weights are downloaded from TF Hub (redirects to Kaggle) and Google Cloud Storage.
 export const CONTENT_SECURITY_POLICY = [
   "default-src 'self'",
