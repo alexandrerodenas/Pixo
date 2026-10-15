@@ -1,0 +1,50 @@
+name: Android APK
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'android/**'
+      - 'services/nativeFileSystem.ts'
+      - 'capacitor.config.ts'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/android.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: android-actions/setup-android@v3
+      - run: npm ci
+      - run: npm run android:sync
+      - name: Build debug APK
+        working-directory: android
+        run: ./gradlew assembleDebug --no-daemon
+      - run: cp android/app/build/outputs/apk/debug/app-debug.apk pixo-debug.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pixo-debug-apk
+          path: pixo-debug.apk
+      # Debug builds are also published on a rolling pre-release, so the APK can be downloaded
+      # straight from a phone without signing in to GitHub.
+      - name: Publish to the android-debug pre-release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view android-debug >/dev/null 2>&1 || \
+            gh release create android-debug --prerelease --title "Android debug build" \
+              --notes "Latest debug APK built by CI. Not signed for the Play Store." --target "${{ github.event.pull_request.head.sha || github.sha }}"
+          gh release upload android-debug pixo-debug.apk --clobber
