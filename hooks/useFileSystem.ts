@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { Photo } from '../services/types.ts';
 import { PhotoStatus } from '../services/types.ts';
+import { revokePhotoURLs } from '../services/photoUrls.ts';
 
 // Helper to recursively delete a file by its relative path from a directory handle
 async function deleteFileByPath(dirHandle: FileSystemDirectoryHandle, path: string): Promise<boolean> {
@@ -36,6 +37,28 @@ async function getFileHandleByPath(dirHandle: FileSystemDirectoryHandle, path: s
   } catch (error) {
     console.error(`Could not get handle for file ${path}:`, error);
     return null;
+  }
+}
+
+// Returns a file name that does not exist yet in dirHandle, suffixing " (n)" before the extension if needed.
+// Names already handed out in this batch are tracked in `reserved` so two sources never get the same target.
+async function getAvailableFileName(dirHandle: FileSystemDirectoryHandle, fileName: string, reserved: Set<string>): Promise<string> {
+  const dotIndex = fileName.lastIndexOf('.');
+  const base = dotIndex > 0 ? fileName.slice(0, dotIndex) : fileName;
+  const ext = dotIndex > 0 ? fileName.slice(dotIndex) : '';
+
+  for (let n = 0; ; n++) {
+    const candidate = n === 0 ? fileName : `${base} (${n})${ext}`;
+    if (reserved.has(candidate.toLowerCase())) continue;
+    try {
+      await dirHandle.getFileHandle(candidate);
+    } catch (error) {
+      if ((error as DOMException).name === 'NotFoundError') {
+        reserved.add(candidate.toLowerCase());
+        return candidate;
+      }
+      throw error;
+    }
   }
 }
 
@@ -92,7 +115,7 @@ export const useFileSystem = (
 
       // Revoke old blob URLs to prevent memory leak
       for (const photo of photos.values()) {
-        URL.revokeObjectURL(photo.objectURL);
+        revokePhotoURLs(photo);
       }
 
       const tempPhotosMap = new Map<string, Photo>();
@@ -140,7 +163,7 @@ export const useFileSystem = (
     await Promise.all(photosToDelete.map(async (p) => {
       const success = await deleteFileByPath(directoryHandleRef.current!, p.id);
       if (success) {
-        URL.revokeObjectURL(p.objectURL); // Clean up blob URL
+        revokePhotoURLs(p); // Clean up blob URLs
         deletedCount++;
       }
     }));
@@ -181,6 +204,7 @@ export const useFileSystem = (
 
       const processedPhotoIds: string[] = [];
       const failedOperations: string[] = [];
+      const reservedNames = new Set<string>();
 
       for (const photo of savedPhotos) {
         setStatusMessage(`${operation === 'move' ? 'Moving' : 'Copying'} ${photo.id}...`);
@@ -195,10 +219,18 @@ export const useFileSystem = (
 
         try {
           const fileData = await sourceFileHandle.getFile();
-          const newFileHandle = await targetSubDir.getFileHandle(fileData.name, { create: true });
+          // Never overwrite: photos from different subfolders often share a name (IMG_0001.jpg).
+          const targetName = await getAvailableFileName(targetSubDir, fileData.name, reservedNames);
+          const newFileHandle = await targetSubDir.getFileHandle(targetName, { create: true });
           const writable = await newFileHandle.createWritable();
           await writable.write(fileData);
           await writable.close();
+
+          // Only remove the original once the copy is verified on disk.
+          const written = await newFileHandle.getFile();
+          if (written.size !== fileData.size) {
+            throw new Error(`Copy of ${photo.id} is incomplete (${written.size}/${fileData.size} bytes)`);
+          }
 
           let processed = true;
           if (operation === 'move') {
@@ -223,7 +255,7 @@ export const useFileSystem = (
           processedPhotoIds.forEach(id => {
             const photo = newPhotos.get(id);
             if (photo) {
-              URL.revokeObjectURL(photo.objectURL);
+              revokePhotoURLs(photo);
               newPhotos.delete(id);
             }
           });

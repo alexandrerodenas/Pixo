@@ -58,20 +58,15 @@ export const usePhotoAnalysis = (
     setPhotos(prev => new Map(prev).set(photoId, { ...prev.get(photoId)!, status: PhotoStatus.ANALYZING }));
 
     try {
-      // We need to fetch the full data binary for analysis.
+      // Hand the file to the worker as a Blob: no base64 data URL on the main thread.
       const fileBlob = await (await fetch(photoToAnalyze.objectURL)).blob();
-      const dataUrl = await new Promise<string>((resolve) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.readAsDataURL(fileBlob);
-      });
 
       const blurThreshold = userProfileRef.current?.blurThreshold ?? 100;
       const sharpThreshold = userProfileRef.current?.sharpThreshold ?? 300;
 
       // Use batch analysis (Web Worker if available, fallback to main thread)
       const result = await api.analyzePhotoBatch({
-        dataUrl,
+        file: fileBlob,
         photoId,
         blurThreshold,
         sharpThreshold,
@@ -98,6 +93,8 @@ export const usePhotoAnalysis = (
         }
       }
 
+      const thumbnailURL = result.thumbnail ? URL.createObjectURL(result.thumbnail) : undefined;
+
       setPhotos(prev => {
         const newPhotos = new Map(prev);
         const currentPhoto = newPhotos.get(photoId);
@@ -114,6 +111,7 @@ export const usePhotoAnalysis = (
             blurLevel: result.blurLevel,
             metadata: { ...result.metadata, size: fileBlob.size, lastModified: Date.now() },
             customLabel: matchedCustomLabel,
+            thumbnailURL,
           };
 
           if (updatedPhoto.status === PhotoStatus.ANALYZED && userProfileRef.current?.autoApplyRules) {
@@ -129,6 +127,9 @@ export const usePhotoAnalysis = (
             }
           }
           newPhotos.set(photoId, updatedPhoto);
+        } else if (thumbnailURL) {
+          // The photo was deleted or moved while it was being analyzed
+          URL.revokeObjectURL(thumbnailURL);
         }
         return newPhotos;
       });

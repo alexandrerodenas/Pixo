@@ -1,7 +1,7 @@
 
 import type { Prediction, ModelsLoadState, ModelLoadStatus } from './types.ts';
 import { detectBlur } from './blurDetection.ts';
-import { analyzePhoto as workerAnalyzePhoto, ensureWorkerInitialized } from './analysisClient.ts';
+import { analyzePhoto as workerAnalyzePhoto, ensureWorkerInitialized, getWorkerBackend } from './analysisClient.ts';
 
 export { detectBlur }; // Re-export for consumption
 
@@ -44,10 +44,16 @@ export const subscribeToModelStatus = (callback: (status: ModelsLoadState) => vo
 // --- End Model Status Tracking ---
 
 // Exported function to get the backend name after it's been initialized.
-export const getTfBackend = (): string | null => backendName;
+export const getTfBackend = (): string | null => getWorkerBackend() ?? backendName;
 
-const initializeTf = async () => {
-  if (tf) return;
+let tfInitPromise: Promise<void> | null = null;
+// Memoized so concurrent callers wait for the backend to be selected
+const initializeTf = (): Promise<void> => {
+  if (!tfInitPromise) tfInitPromise = loadTf();
+  return tfInitPromise;
+};
+
+const loadTf = async () => {
   console.log('Dynamically loading TensorFlow.js and models...');
 
   // Load main libraries dynamically and in parallel
@@ -57,27 +63,12 @@ const initializeTf = async () => {
     import('@tensorflow-models/mobilenet')
   ]);
 
-  // Load backends
+  // Load backends (tfBackend.ts registers the WASM backend and its binaries)
   await import('@tensorflow/tfjs-backend-webgpu');
-  await import('@tensorflow/tfjs-backend-wasm');
   await import('@tensorflow/tfjs-backend-webgl');
+  const { selectBackend } = await import('./tfBackend.ts');
 
-  try {
-    await tf.setBackend('webgpu');
-    console.log('Using WebGPU backend for TensorFlow.js');
-  } catch (e) {
-    console.warn('WebGPU backend not available, falling back to WASM.', e);
-    try {
-      await tf.setBackend('wasm');
-      console.log('Using WASM backend for TensorFlow.js');
-    } catch (e2) {
-      console.warn('WASM backend not available, falling back to WebGL.', e2);
-      await tf.setBackend('webgl');
-    }
-  }
-
-  await tf.ready();
-  backendName = tf.getBackend()?.toUpperCase();
+  backendName = await selectBackend(tf, ['webgpu', 'webgl', 'wasm', 'cpu']);
   console.log(`TensorFlow.js backend ready (${backendName}).`);
 }
 
@@ -124,31 +115,37 @@ const getDetectionModel = () => {
 }
 
 export const preloadModels = () => {
-  console.log('Preloading AI models...');
-  getClassificationModel();
-  getDetectionModel();
-
-  // Also try to initialize the Web Worker in the background
-  ensureWorkerInitialized().catch(() => {
-    console.log('Web Worker not available, using main thread for analysis.');
-  });
+  // The worker loads its own copy of the models; the main thread only loads them
+  // if the worker cannot start, so they are never downloaded and held in memory twice.
+  updateStatus('classification', 'loading');
+  updateStatus('detection', 'loading');
+  ensureWorkerInitialized()
+    .then(() => {
+      updateStatus('classification', 'loaded');
+      updateStatus('detection', 'loaded');
+    })
+    .catch((error) => {
+      console.warn('Web Worker not available, loading models on the main thread.', error);
+      getClassificationModel().catch(() => {});
+      getDetectionModel().catch(() => {});
+    });
 };
 
-// Helper function to create an Image element from a data URL
-const createImageElement = (dataUrl: string): Promise<HTMLImageElement> => {
-  return new Promise((resolve, reject) => {
+// Helper function to decode a Blob into an Image element (main-thread fallback only)
+const createImageElement = (file: Blob): Promise<HTMLImageElement> => {
+  const url = URL.createObjectURL(file);
+  return new Promise<HTMLImageElement>((resolve, reject) => {
     const img = new Image();
     img.onload = () => resolve(img);
     img.onerror = (err) => reject(err);
-    img.src = dataUrl;
-  });
+    img.src = url;
+  }).finally(() => URL.revokeObjectURL(url));
 };
 
 // This function runs image classification using TensorFlow.js and MobileNet
-export const classifyImage = async (dataUrl: string): Promise<Prediction[]> => {
+export const classifyImage = async (imageElement: HTMLImageElement): Promise<Prediction[]> => {
   try {
     const model = await getClassificationModel();
-    const imageElement = await createImageElement(dataUrl);
 
     const predictions = await model.classify(imageElement);
 
@@ -164,10 +161,9 @@ export const classifyImage = async (dataUrl: string): Promise<Prediction[]> => {
 };
 
 // This function runs object detection using COCO-SSD
-export const detectObjects = async (dataUrl: string): Promise<Prediction[]> => {
+export const detectObjects = async (imageElement: HTMLImageElement): Promise<Prediction[]> => {
   try {
     const model = await getDetectionModel();
-    const imageElement = await createImageElement(dataUrl);
 
     const detections = await model.detect(imageElement);
 
@@ -182,10 +178,9 @@ export const detectObjects = async (dataUrl: string): Promise<Prediction[]> => {
 }
 
 // Generates a 1024-dim embedding vector using MobileNet's internal layer
-export const generateEmbedding = async (dataUrl: string): Promise<number[]> => {
+export const generateEmbedding = async (imageElement: HTMLImageElement): Promise<number[]> => {
   try {
     const model = await getClassificationModel();
-    const imageElement = await createImageElement(dataUrl);
 
     // Use infer(img, true) to get the embedding instead of classification
     const embeddingTensor = model.infer(imageElement, true);
@@ -208,7 +203,7 @@ export const getTF = async () => {
 // --- Worker-based batch analysis (falls back to main thread) ---
 
 interface BatchAnalysisOptions {
-  dataUrl: string;
+  file: Blob;
   photoId: string;
   blurThreshold: number;
   sharpThreshold: number;
@@ -226,6 +221,7 @@ interface BatchAnalysisResult {
     width: number;
     height: number;
   };
+  thumbnail?: Blob | null;
 }
 
 /**
@@ -233,13 +229,13 @@ interface BatchAnalysisResult {
  * Uses Web Worker if available, falls back to main thread.
  */
 export const analyzePhotoBatch = async (options: BatchAnalysisOptions): Promise<BatchAnalysisResult> => {
-  const { dataUrl, photoId, blurThreshold, sharpThreshold } = options;
+  const { file, photoId, blurThreshold, sharpThreshold } = options;
 
   // Try Web Worker first
   if (typeof Worker !== 'undefined') {
     try {
       const result = await workerAnalyzePhoto({
-        dataUrl,
+        file,
         photoId,
         blurThreshold,
         sharpThreshold,
@@ -251,8 +247,8 @@ export const analyzePhotoBatch = async (options: BatchAnalysisOptions): Promise<
     }
   }
 
-  // Main thread fallback
-  const img = await createImageElement(dataUrl);
+  // Main thread fallback: decode once and share the element between all models
+  const img = await createImageElement(file);
 
   const metadata = {
     width: img.naturalWidth,
@@ -260,9 +256,9 @@ export const analyzePhotoBatch = async (options: BatchAnalysisOptions): Promise<
   };
 
   const [classifications, detections, embedding, blurResult] = await Promise.all([
-    classifyImage(dataUrl),
-    detectObjects(dataUrl),
-    generateEmbedding(dataUrl),
+    classifyImage(img),
+    detectObjects(img),
+    generateEmbedding(img),
     detectBlur(img, { blurry: blurThreshold, sharp: sharpThreshold }),
   ]);
 

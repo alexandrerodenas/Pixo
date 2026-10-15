@@ -5,62 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Pixo - Organize your photos effortlessly</title>
     <link rel="icon" type="image/png" href="/logo.png" />
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        .no-scrollbar {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-        }
-        .no-scrollbar::-webkit-scrollbar {
-            display: none;
-        }
-        .mask-linear-gradient {
-            -webkit-mask-image: linear-gradient(to right, transparent 0%, black 12px, black calc(100% - 24px), transparent 100%);
-            mask-image: linear-gradient(to right, transparent 0%, black 12px, black calc(100% - 24px), transparent 100%);
-        }
-    </style>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        primary: {
-                            DEFAULT: 'hsl(190, 80%, 45%)',
-                            light: 'hsl(190, 80%, 60%)',
-                            dark: 'hsl(190, 80%, 35%)',
-                        },
-                        secondary: {
-                            DEFAULT: 'hsl(38, 92%, 50%)',
-                            light: 'hsl(38, 92%, 65%)',
-                            dark: 'hsl(38, 92%, 40%)',
-                        },
-                        accent: {
-                            DEFAULT: 'hsl(210, 90%, 55%)',
-                            light: 'hsl(210, 90%, 65%)',
-                            dark: 'hsl(210, 90%, 45%)',
-                        },
-                    },
-                },
-            },
-        }
-    </script>
-    <script type="importmap">
-        {
-          "imports": {
-            "react-dom/": "https://esm.sh/react-dom@19.1.0/",
-            "react/": "https://esm.sh/react@19.1.0/",
-            "react": "https://esm.sh/react@19.1.0",
-            "lucide-react": "https://esm.sh/lucide-react@^0.525.0",
-            "@tensorflow/tfjs": "https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.es2017.mjs",
-            "@tensorflow-models/mobilenet": "https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@4.0.0/dist/mobilenet.es2017.mjs",
-            "@tensorflow-models/coco-ssd": "https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.es2017.mjs",
-            "@tensorflow/tfjs-backend-webgpu": "https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgpu@4.22.0/dist/tf-backend-webgpu.es2017.mjs",
-            "@tensorflow/tfjs-backend-wasm": "https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-wasm@4.22.0/dist/tf-backend-wasm.es2017.mjs",
-            "@tensorflow/tfjs-backend-webgl": "https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl@4.22.0/dist/tf-backend-webgl.es2017.mjs"
-          }
-        }
-    </script>
 </head>
 <body class="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 antialiased">
 <div id="root"></div>

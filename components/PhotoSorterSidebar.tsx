@@ -212,7 +212,7 @@ const PhotoSorterSidebar: React.FC<PhotoSorterSidebarProps> = ({
 
             <ActionButton onClick={onToggleIsolateSelection} disabled={selectedPhotoCount === 0 && !isolateSelection} title={isolateSelection ? "Show all photos" : "Isolate Selection"} className="bg-blue-500 text-white hover:bg-blue-600" icon={isolateSelection ? <Eye className="w-5 h-5"/> : <EyeOff className="w-5 h-5"/>}>{isolateSelection ? "Show All" : "Isolate"}</ActionButton>
             <ActionButton onClick={onToggleIsolateSaved} disabled={savedPhotoCount === 0 && !isolateSaved} title={isolateSaved ? "Show all photos" : `Isolate Saved (${savedPhotoCount})`} className="bg-pink-500 text-white hover:bg-pink-600" icon={<Heart className="w-5 h-5 fill-current"/>}>{isolateSaved ? "Show All" : `Isolate (${savedPhotoCount})`}</ActionButton>
-            <ActionButton onClick={onMoveSavedPhotos} disabled={savedPhotoCount === 0} title={`Move Saved (${savedPhotoCount})`} className="bg-green-600 text-white hover:bg-green-700" icon={<Save className="w-5 h-5"/>}>{`Move (${savedPhotoCount})`}</ActionButton>
+            <ActionButton onClick={() => onMoveSavedPhotos()} disabled={savedPhotoCount === 0} title={`Move Saved (${savedPhotoCount})`} className="bg-green-600 text-white hover:bg-green-700" icon={<Save className="w-5 h-5"/>}>{`Move (${savedPhotoCount})`}</ActionButton>
             <ActionButton onClick={onDeleteSelected} disabled={selectedPhotoCount === 0} title={`Delete Selected (${selectedPhotoCount})`} className="bg-red-600 text-white hover:bg-red-700" icon={<Trash2 className="w-5 h-5"/>}>{`Delete (${selectedPhotoCount})`}</ActionButton>
           </div>
         </div>

@@ -72,16 +72,6 @@ instead of casting everywhere. Keep it minimal — only the methods used.
 
 ## Build & Tooling
 
-### PostCSS Tailwind (replace CDN)
-**Why:** `index.html` loads `cdn.tailwindcss.com` at runtime (~100 KB gzip). The
-production build includes the CDN script as-is. Switching to Vite + PostCSS +
-`@tailwindcss/vite` would eliminate the runtime dependency and shrink the bundle.
-
-### Stable React Version in Import Map
-**Why:** The import map points to `esm.sh/react@19.0.0-rc.0`. The npm package.json
-depends on `^19.1.0` (stable). Builds use the npm version, but the import map can
-cause confusion.
-
 ### Remove `@types/node` Dev Dependency
 **Why:** The project does not use Node.js APIs. `@types/node` is installed but never
 imported.
