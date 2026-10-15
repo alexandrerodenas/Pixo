@@ -264,7 +264,7 @@ const ControlBar: React.FC<ControlBarProps> = ({
 
           {/* Destructive Actions */}
           <div className="flex gap-1 shrink-0">
-            <IconButton onClick={onMoveSavedPhotos} disabled={savedPhotoCount === 0} icon={<Save className="w-5 h-5" />} title="Move Saved Photos" className="text-green-600 dark:text-green-500 hover:bg-green-100 dark:hover:bg-green-900/30"/>
+            <IconButton onClick={() => onMoveSavedPhotos()} disabled={savedPhotoCount === 0} icon={<Save className="w-5 h-5" />} title="Move Saved Photos" className="text-green-600 dark:text-green-500 hover:bg-green-100 dark:hover:bg-green-900/30"/>
             <IconButton onClick={onDeleteSelected} disabled={selectedPhotoCount === 0} icon={<Trash2 className="w-5 h-5" />} title="Delete Selected" className="text-red-600 dark:text-red-500 hover:bg-red-100 dark:hover:bg-red-900/30"/>
           </div>
         </div>

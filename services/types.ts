@@ -14,7 +14,8 @@ export interface Prediction {
 
 export interface Photo {
   id: string; // The full path of the photo, used as a unique ID
-  objectURL: string; // blob url for efficient rendering
+  objectURL: string; // blob url of the original file (viewer, Zen mode)
+  thumbnailURL?: string; // blob url of a small JPEG generated during analysis (grid)
   status: PhotoStatus;
   classifications: Prediction[];
   detections: Prediction[];

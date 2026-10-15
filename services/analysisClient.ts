@@ -1,4 +1,3 @@
-
 // Client-side interface for the analysis Web Worker
 // Manages worker lifecycle, message passing, and cleanup
 
@@ -7,6 +6,7 @@ type ErrorCallback = (error: string, photoId?: string) => void;
 let worker: Worker | null = null;
 let isWorkerSupported = typeof Worker !== 'undefined';
 let isInitialized = false;
+let workerBackend: string | null = null;
 let pendingResolve: Map<string, { resolve: (value: any) => void; reject: (reason?: any) => void }> = new Map();
 let initPromise: Promise<void> | null = null;
 let errorSubscriber: ErrorCallback | null = null;
@@ -28,6 +28,7 @@ function handleWorkerMessage(event: MessageEvent) {
   switch (msg.type) {
     case 'initialized':
       isInitialized = true;
+      workerBackend = msg.backend ?? null;
       break;
 
     case 'result': {
@@ -54,6 +55,11 @@ function handleWorkerMessage(event: MessageEvent) {
 
 function handleWorkerError(event: ErrorEvent) {
   console.error('Analysis worker error:', event.message);
+  // A crashed worker never answers: fail every pending analysis instead of hanging the queue.
+  for (const pending of pendingResolve.values()) {
+    pending.reject(new Error(event.message || 'Analysis worker crashed'));
+  }
+  pendingResolve.clear();
   errorSubscriber?.(event.message);
 }
 
@@ -72,20 +78,25 @@ export async function ensureWorkerInitialized(): Promise<void> {
   }
 
   initPromise = new Promise<void>((resolve, reject) => {
+    // Model download can be slow on a cold cache
+    const timeout = setTimeout(() => {
+      worker!.removeEventListener('message', handler as any);
+      reject(new Error('Worker initialization timed out'));
+    }, 60000);
+
     const handler = (event: MessageEvent) => {
-      if (event.data.type === 'initialized') {
+      if (event.data.type === 'initialized' || (event.data.type === 'error' && !event.data.photoId)) {
+        clearTimeout(timeout);
         worker!.removeEventListener('message', handler as any);
-        isInitialized = true;
-        resolve();
+        if (event.data.type === 'initialized') {
+          isInitialized = true;
+          resolve();
+        } else {
+          reject(new Error(event.data.error));
+        }
       }
     };
     worker!.addEventListener('message', handler as any);
-
-    // Timeout after 30s
-    setTimeout(() => {
-      worker!.removeEventListener('message', handler as any);
-      reject(new Error('Worker initialization timed out'));
-    }, 30000);
 
     worker!.postMessage({ type: 'initialize' });
   });
@@ -94,7 +105,7 @@ export async function ensureWorkerInitialized(): Promise<void> {
 }
 
 export interface AnalyzeOptions {
-  dataUrl: string;
+  file: Blob;
   photoId: string;
   blurThreshold?: number;
   sharpThreshold?: number;
@@ -120,7 +131,7 @@ export function analyzePhoto(options: AnalyzeOptions): Promise<any> {
     // Store pending promise
     pendingResolve.set(photoId, { resolve, reject });
 
-    // Send analysis request
+    // Send analysis request. Blobs are passed by reference, not copied or base64-encoded.
     worker.postMessage({
       type: 'analyze',
       ...options,
@@ -139,10 +150,15 @@ export function terminateWorker() {
     worker = null;
   }
   isInitialized = false;
+  workerBackend = null;
   initPromise = null;
   pendingResolve.clear();
 }
 
 export function isWorkerActive(): boolean {
   return worker !== null && isInitialized;
+}
+
+export function getWorkerBackend(): string | null {
+  return workerBackend;
 }

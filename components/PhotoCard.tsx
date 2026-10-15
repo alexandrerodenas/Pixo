@@ -86,7 +86,7 @@ function PhotoCard({ photo, onSelect, onView, onFilterChange, onToggleSave }: Ph
       >
         {isVisible && (
             <>
-              <img src={photo.objectURL} alt={photo.id} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" loading="lazy" />
+              <img src={photo.thumbnailURL ?? photo.objectURL} alt={photo.id} decoding="async" className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" loading="lazy" />
               <div className="absolute inset-0 bg-black/10 group-hover:bg-black/30 transition-opacity duration-300"></div>
 
               {photo.selected && (

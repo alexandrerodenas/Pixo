@@ -5,33 +5,29 @@
 import * as tf from '@tensorflow/tfjs';
 import '@tensorflow/tfjs-backend-wasm';
 import '@tensorflow/tfjs-backend-webgl';
+import { selectBackend } from '../services/tfBackend.ts';
 
 let mobilenetModel: any = null;
 let cocoSsdModel: any = null;
 let isInitialized = false;
+let initPromise: Promise<void> | null = null;
 let backendName = '';
 
-// Set WASM as preferred backend for workers (WebGL may not be available)
-async function initialize() {
-  if (isInitialized) return;
-
-  try {
-    // Try WebGL first (some browsers support it via OffscreenCanvas)
-    await tf.setBackend('webgl');
-    backendName = 'WEBGL';
-  } catch {
-    // Fall back to WASM (most compatible in workers)
-    try {
-      await tf.setBackend('wasm');
-      backendName = 'WASM';
-    } catch {
-      // Final fallback to CPU
-      await tf.setBackend('cpu');
-      backendName = 'CPU';
-    }
+// Memoized so concurrent 'initialize' and 'analyze' messages share one model load.
+function initialize(): Promise<void> {
+  if (!initPromise) {
+    initPromise = loadModels().catch((error) => {
+      initPromise = null;
+      throw error;
+    });
   }
+  return initPromise;
+}
 
-  await tf.ready();
+async function loadModels() {
+
+  // WebGL works in workers through OffscreenCanvas; WASM and CPU are the fallbacks.
+  backendName = await selectBackend(tf, ['webgl', 'wasm', 'cpu']);
 
   // Load models in parallel
   const mobilenet = await import('@tensorflow-models/mobilenet');
@@ -45,11 +41,33 @@ async function initialize() {
   isInitialized = true;
 }
 
-// Decode data URL to ImageBitmap (worker-safe alternative to new Image())
-async function dataUrlToImageBitmap(dataUrl: string): Promise<ImageBitmap> {
-  const response = await fetch(dataUrl);
-  const blob = await response.blob();
-  return createImageBitmap(blob);
+// Longest side of the image fed to the models. MobileNet works at 224px and COCO-SSD
+// at ~300px; blur detection resizes to 512px wide, so 1024px keeps enough detail.
+const ANALYSIS_MAX_SIDE = 1024;
+// Shortest side of the grid thumbnail (cards are square, object-cover).
+const THUMBNAIL_MIN_SIDE = 512;
+
+async function resizeBitmap(source: ImageBitmap, scale: number): Promise<ImageBitmap> {
+  return createImageBitmap(source, {
+    resizeWidth: Math.max(1, Math.round(source.width * scale)),
+    resizeHeight: Math.max(1, Math.round(source.height * scale)),
+    resizeQuality: 'high',
+  });
+}
+
+async function createThumbnail(source: ImageBitmap): Promise<Blob | null> {
+  if (typeof OffscreenCanvas === 'undefined') return null;
+  const scale = Math.min(1, THUMBNAIL_MIN_SIDE / Math.min(source.width, source.height));
+  const bitmap = scale < 1 ? await resizeBitmap(source, scale) : source;
+  try {
+    const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+    ctx.drawImage(bitmap, 0, 0);
+    return await canvas.convertToBlob({ type: 'image/jpeg', quality: 0.85 });
+  } finally {
+    if (bitmap !== source) bitmap.close();
+  }
 }
 
 // Blur detection logic (pure TF tensor ops, no DOM)
@@ -117,6 +135,7 @@ interface AnalysisResult {
   blurRaw: number;
   blurLevel: 'sharp' | 'ok' | 'blurry';
   metadata: { width: number; height: number };
+  thumbnail: Blob | null;
 }
 
 // Handle incoming messages
@@ -136,39 +155,51 @@ self.onmessage = async (event: MessageEvent) => {
           await initialize();
         }
 
-        const { photoId, dataUrl, blurThreshold = 100, sharpThreshold = 300 } = msg;
+        const { photoId, file, blurThreshold = 100, sharpThreshold = 300 } = msg;
 
-        // Decode image once for all analysis tasks
-        const bitmap = await dataUrlToImageBitmap(dataUrl);
-        const metadata = { width: bitmap.width, height: bitmap.height };
+        // Decode the file once at full size, then derive a smaller copy for the models
+        // and a thumbnail for the grid, so no model ever sees a full-resolution tensor.
+        const original = await createImageBitmap(file as Blob);
+        const metadata = { width: original.width, height: original.height };
+        const analysisScale = Math.min(1, ANALYSIS_MAX_SIDE / Math.max(original.width, original.height));
+        let bitmap: ImageBitmap | null = null;
+        let thumbnail: Blob | null = null;
+        let results: [AnalysisResult['classifications'], AnalysisResult['detections'], number[], ReturnType<typeof detectBlur>];
 
-        // Run all 4 analyses
-        const [classifications, detections, embedding, blurResult] = await Promise.all([
-          (async () => {
-            const preds = await mobilenetModel.classify(bitmap);
-            return preds.map((p: any) => ({
-              label: p.className.split(', ')[0],
-              score: p.probability,
-            }));
-          })(),
-          (async () => {
-            const dets = await cocoSsdModel.detect(bitmap);
-            return dets.map((d: any) => ({
-              label: d.class,
-              score: d.score,
-            }));
-          })(),
-          (async () => {
-            const embeddingTensor = mobilenetModel.infer(bitmap, true);
-            const data = await embeddingTensor.data();
-            embeddingTensor.dispose();
-            return Array.from(data) as number[];
-          })(),
-          Promise.resolve(detectBlur(tf, bitmap, blurThreshold, sharpThreshold)),
-        ]);
+        try {
+          bitmap = analysisScale < 1 ? await resizeBitmap(original, analysisScale) : original;
+          thumbnail = await createThumbnail(original).catch(() => null);
+          const image = bitmap;
 
-        // Close bitmap to free memory
-        bitmap.close();
+          results = await Promise.all([
+            (async () => {
+              const preds = await mobilenetModel.classify(image);
+              return preds.map((p: any) => ({
+                label: p.className.split(', ')[0],
+                score: p.probability,
+              }));
+            })(),
+            (async () => {
+              const dets = await cocoSsdModel.detect(image);
+              return dets.map((d: any) => ({
+                label: d.class,
+                score: d.score,
+              }));
+            })(),
+            (async () => {
+              const embeddingTensor = mobilenetModel.infer(image, true);
+              const data = await embeddingTensor.data();
+              embeddingTensor.dispose();
+              return Array.from(data) as number[];
+            })(),
+            Promise.resolve(detectBlur(tf, image, blurThreshold, sharpThreshold)),
+          ]);
+        } finally {
+          // Free decoded pixels as soon as possible
+          if (bitmap && bitmap !== original) bitmap.close();
+          original.close();
+        }
+        const [classifications, detections, embedding, blurResult] = results;
 
         self.postMessage({
           type: 'result',
@@ -180,6 +211,7 @@ self.onmessage = async (event: MessageEvent) => {
           blurRaw: blurResult.raw,
           blurLevel: blurResult.level,
           metadata,
+          thumbnail,
         } satisfies { type: string; photoId: string } & AnalysisResult);
         break;
       }
