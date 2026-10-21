@@ -17,7 +17,6 @@ import android.provider.MediaStore;
 import android.provider.MediaStore.Images;
 import android.provider.OpenableColumns;
 import android.content.Intent;
-import com.getcapacitor.PluginListenerHandle;
 import android.provider.Settings;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.IntentSenderRequest;
