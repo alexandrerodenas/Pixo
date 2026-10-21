@@ -56,5 +56,6 @@ interface Window {
     id?: string;
     mode?: 'read' | 'readwrite';
     startIn?: 'desktop' | 'documents' | 'downloads' | 'music' | 'pictures' | 'videos';
+    title?: string;
   }): Promise<FileSystemDirectoryHandle>;
 }
