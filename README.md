@@ -20,6 +20,18 @@
   <a href="https://github.com/alexandrerodenas/Pixo/commits/develop"><img src="https://img.shields.io/github/last-commit/alexandrerodenas/Pixo?color=blue" alt="Last commit"></a>
 </p>
 
+## 📱 Android app (APK)
+
+**[⬇️ Download the latest Android APK](https://github.com/alexandrerodenas/Pixo/releases/download/android-debug/pixo-debug.apk)** (debug build, rebuilt on every change to the app)
+
+1. Open the link on your Android phone and download `pixo-debug.apk`.
+2. Allow installs from this source when Android asks (*Install unknown apps*).
+3. Open **Pixo**, tap **Scan Phone**, and allow access to your photos.
+
+Everything you already see on the web version is there, and the app scans **every photo on the phone** (no folder to pick). Deleted photos go to the gallery's trash (recoverable for 30 days), and saved photos are moved to `Pictures/saves`.
+
+> Requires Android 7.0 or newer. The APK is not signed for the Play Store: you install it by hand, and future builds update it in place. More builds: [all releases](https://github.com/alexandrerodenas/Pixo/releases).
+
 Pixo is a privacy-first web application that organizes your local photos using AI — entirely in your browser. No uploads, no servers, no data collection.
 
 Leveraging the File System Access API and TensorFlow.js, it runs MobileNet and COCO-SSD models locally for scene classification, object detection, blur scoring, and duplicate matching.
@@ -39,6 +51,10 @@ Leveraging the File System Access API and TensorFlow.js, it runs MobileNet and C
 
 ## Quick Start
 
+### Android
+
+See [📱 Android app (APK)](#-android-app-apk) above.
+
 ### Direct Browser
 
 Open `index.html` in a browser supporting the File System Access API (Chrome, Edge). Follow the onboarding, then select a photo directory.
@@ -57,7 +73,7 @@ Open [http://localhost:8080](http://localhost:8080).
 ## Usage
 
 1. **Onboarding** — Enter your name to create a profile with sensible default rules.
-2. **Load Photos** — Click *Select Directory* in the sidebar.
+2. **Load Photos** — Click *Select Directory* in the sidebar (web), or *Scan Phone* (Android app).
 3. **AI Analysis** — Models run automatically; track progress in real-time.
 4. **Organize** — Find duplicates, isolate blurry shots, mark favorites, apply rules, move or delete.
 5. **Customize** — Add rules, adjust uncertainty threshold, change the saved folder name, export your profile.
@@ -65,6 +81,16 @@ Open [http://localhost:8080](http://localhost:8080).
 ## Tech Stack
 
 **React 19**, **TypeScript**, **TensorFlow.js** (MobileNet, COCO-SSD), **Vite**, **Tailwind CSS**, **Docker**.
+
+## Build the Android app
+
+```bash
+npm install
+npm run android:sync   # builds the web app and copies it into android/
+cd android && ./gradlew assembleDebug
+```
+
+The APK is written to `android/app/build/outputs/apk/debug/app-debug.apk`. CI builds the same file on every push to a pull request that touches the Android code (see `.github/workflows/android.yml`).
 
 ## Roadmap
 
