@@ -3,13 +3,6 @@ name: Android APK
 on:
   workflow_dispatch:
   pull_request:
-    paths:
-      - 'android/**'
-      - 'services/nativeFileSystem.ts'
-      - 'capacitor.config.ts'
-      - 'package.json'
-      - 'package-lock.json'
-      - '.github/workflows/android.yml'
 
 permissions:
   contents: write

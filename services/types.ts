@@ -21,6 +21,7 @@ export interface Photo {
   detections: Prediction[];
   selected: boolean;
   isSaved?: boolean;
+  source?: { size: number; lastModified: number }; // the file as scanned, to match saved progress
   customLabel?: string;
 
   // Duplicate Detection

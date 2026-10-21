@@ -1,7 +1,8 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { UserProfile } from '../services/types.ts';
 import { Zap, Bot, ShieldCheck, SlidersHorizontal } from 'lucide-react';
+import { guessOwnerFirstName } from '../services/phoneLibrary.ts';
 
 interface OnboardingProps {
   onProfileSave: (profile: UserProfile) => void;
@@ -19,6 +20,11 @@ const FeatureCard = ({ icon, title, children }: { icon: React.ReactNode, title: 
 
 const Onboarding: React.FC<OnboardingProps> = ({ onProfileSave }) => {
   const [firstName, setFirstName] = useState('');
+
+  // Android app: suggest the name found in the phone's name ("Alex's Pixel")
+  useEffect(() => {
+    guessOwnerFirstName().then(name => { if (name) setFirstName(current => current || name); });
+  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

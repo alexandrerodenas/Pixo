@@ -19,10 +19,10 @@ import {
   LayoutGrid,
   FolderTree,
   Sparkles,
-  MoreHorizontal,
-} from 'lucide-react';
+  MoreHorizontal, Smartphone } from 'lucide-react';
 import { Spinner } from './ui.tsx';
 import AutocompleteInput from './AutocompleteInput.tsx';
+import { isPhoneLibrary } from '../services/phoneLibrary.ts';
 
 interface ControlBarProps {
   userProfile: UserProfile;
@@ -140,8 +140,8 @@ const ControlBar: React.FC<ControlBarProps> = ({
               disabled={isLoading || !isApiSupported}
               className="flex items-center gap-2 px-3 py-1.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 text-sm whitespace-nowrap"
           >
-            {isLoading ? <Spinner className="w-4 h-4 text-current" /> : <FolderOpen className="w-4 h-4" />}
-            <span className="hidden sm:inline">Open Folder</span>
+            {isLoading ? <Spinner className="w-4 h-4 text-current" /> : isPhoneLibrary() ? <Smartphone className="w-4 h-4" /> : <FolderOpen className="w-4 h-4" />}
+            <span className="hidden sm:inline">{isPhoneLibrary() ? 'Scan Phone' : 'Open Folder'}</span>
           </button>
         </div>
 

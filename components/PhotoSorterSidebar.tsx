@@ -23,6 +23,7 @@ import {
 import { Spinner } from './ui.tsx';
 import AutocompleteInput from './AutocompleteInput.tsx';
 import ModelLoadingIndicator from "./ModelLoadingIndicator.tsx";
+import { isPhoneLibrary } from '../services/phoneLibrary.ts';
 
 interface PhotoSorterSidebarProps {
   userProfile: UserProfile;
@@ -160,9 +161,9 @@ const PhotoSorterSidebar: React.FC<PhotoSorterSidebarProps> = ({
                   onClick={onLoadPhotos}
                   disabled={isLoading || !isApiSupported}
                   className={`w-full px-4 py-2 bg-primary text-white font-semibold rounded-md hover:bg-primary-dark transition disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center gap-2 ${isOpen ? 'justify-center' : 'lg:justify-center'}`}
-                  title={!isApiSupported ? "Your browser is not supported for this feature." : "Select a directory to load photos"}
+                  title={!isApiSupported ? "Your browser is not supported for this feature." : isPhoneLibrary() ? "Load every photo on this phone" : "Select a directory to load photos"}
               >
-                {isLoading ? <Spinner className="w-5 h-5"/> : (isOpen ? 'Select Directory' : <FolderOpen className="w-5 h-5"/>)}
+                {isLoading ? <Spinner className="w-5 h-5"/> : (isOpen ? (isPhoneLibrary() ? 'Scan Phone' : 'Select Directory') : <FolderOpen className="w-5 h-5"/>)}
               </button>
             </div>
           </div>
