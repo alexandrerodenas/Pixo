@@ -1,5 +1,6 @@
-// Interface strings. English is the source; French is used when the browser or phone is set to French.
-// Add a key to both dictionaries. `{name}` in a value is replaced by the matching argument.
+// Interface strings. The app is in French for now, whatever the phone's language: the rest of the
+// interface is French too (see the components). `{name}` in a value is replaced by the matching argument.
+// The English dictionary is kept as the reference for the keys.
 
 const en = {
   'scan.folder': 'Scanning directory...',
@@ -55,8 +56,7 @@ const fr: Record<keyof typeof en, string> = {
   'onboarding.name': 'Ton prénom',
 };
 
-const isFrench = typeof navigator !== 'undefined' && (navigator.language || '').toLowerCase().startsWith('fr');
-const dictionary: Record<string, string> = isFrench ? fr : en;
+const dictionary: Record<string, string> = fr;
 
 export function t(key: keyof typeof en, args: Record<string, string | number> = {}): string {
   return dictionary[key].replace(/\{(\w+)\}/g, (_, name) => String(args[name] ?? `{${name}}`));

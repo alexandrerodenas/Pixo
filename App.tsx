@@ -80,7 +80,7 @@ const App: React.FC = () => {
   if (isLoading) {
     return (
         <div className="flex items-center justify-center h-screen bg-gray-100 dark:bg-gray-900 text-gray-600 dark:text-gray-300">
-          <p className="text-xl animate-pulse">Loading your space... ✨</p>
+          <p className="text-xl animate-pulse">Chargement de ton espace... ✨</p>
         </div>
     );
   }

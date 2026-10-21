@@ -52,7 +52,7 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ isOpen, onC
       URL.revokeObjectURL(url);
     } catch (error) {
       console.error("Failed to export profile:", error);
-      alert("An error occurred while exporting your profile.");
+      alert("Une erreur est survenue pendant l'export du profil.");
     }
   };
 
@@ -69,11 +69,11 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ isOpen, onC
       try {
         const text = e.target?.result;
         if (typeof text !== 'string') {
-          throw new Error("Failed to read file content.");
+          throw new Error("Impossible de lire le contenu du fichier.");
         }
         const importedProfile = parseImportedProfile(JSON.parse(text));
         if (!importedProfile) {
-          throw new Error("Invalid profile file format.");
+          throw new Error("Format de fichier de profil invalide.");
         }
 
         const newProfileState: UserProfile = {
@@ -85,14 +85,14 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ isOpen, onC
           savedOperation: importedProfile.savedOperation || 'move',
         };
         setEditedProfile(newProfileState);
-        alert("Profile imported successfully! Review the changes and click 'Save Changes' to apply them.");
+        alert("Profil importé ! Vérifie les changements puis clique sur « Enregistrer » pour les appliquer.");
       } catch (error) {
         console.error("Failed to import profile:", error);
-        alert("Failed to import profile. Please make sure it's a valid JSON file exported from this application.");
+        alert("Impossible d'importer le profil. Vérifie que c'est un fichier JSON exporté depuis Pixo.");
       }
     };
     reader.onerror = () => {
-      alert("Error reading file.");
+      alert("Erreur de lecture du fichier.");
     };
     reader.readAsText(file);
 
@@ -125,7 +125,7 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ isOpen, onC
               className="hidden"
           />
           <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center flex-shrink-0">
-            <h2 className="text-2xl font-bold flex items-center gap-2"><User className="text-primary"/> User Profile & Rules</h2>
+            <h2 className="text-2xl font-bold flex items-center gap-2"><User className="text-primary"/> Profil et règles</h2>
             <button onClick={onClose} className="p-1.5 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600"><X className="w-5 h-5"/></button>
           </div>
           <div className="border-b border-gray-200 dark:border-gray-700 px-6 bg-gray-50 dark:bg-gray-800/50 flex-shrink-0">

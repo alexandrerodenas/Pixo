@@ -40,7 +40,7 @@ export const CustomLabelsManager: React.FC<CustomLabelsManagerProps> = ({ profil
 
   const handleSave = () => {
     if (!name.trim() || associatedLabels.length === 0) {
-      alert('Please provide a name and at least one associated AI label.');
+      alert('Donne un nom et au moins un libellé IA associé.');
       return;
     }
 
@@ -71,7 +71,7 @@ export const CustomLabelsManager: React.FC<CustomLabelsManagerProps> = ({ profil
   };
 
   const handleDelete = (id: string) => {
-    if(window.confirm('Are you sure you want to delete this custom label?')) {
+    if(window.confirm('Supprimer ce libellé personnalisé ?')) {
       setProfile(p => ({
         ...p,
         customLabels: (p.customLabels ?? []).filter(cl => cl.id !== id)
@@ -89,7 +89,7 @@ export const CustomLabelsManager: React.FC<CustomLabelsManagerProps> = ({ profil
   return (
       <div className="space-y-6">
         <div>
-          <h3 className="text-lg font-bold">Custom Labels</h3>
+          <h3 className="text-lg font-bold">Libellés personnalisés</h3>
           <p className="text-sm text-gray-500 dark:text-gray-400">
             Group multiple AI-generated labels under a single, personalized name. For example, a "Dog" label could group "collie", "poodle", and "retriever".
           </p>
@@ -97,10 +97,10 @@ export const CustomLabelsManager: React.FC<CustomLabelsManagerProps> = ({ profil
 
         {/* Form for adding/editing */}
         <div className="p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg space-y-4">
-          <h4 className="font-semibold text-lg">{editingLabel ? `Editing "${editingLabel.name}"` : 'Create New Custom Label'}</h4>
+          <h4 className="font-semibold text-lg">{editingLabel ? `Editing "${editingLabel.name}"` : 'Créer un libellé personnalisé'}</h4>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Custom Label Name</label>
+            <label className="block text-sm font-medium mb-1">Nom du libellé</label>
             <AutocompleteInput
                 placeholder="e.g., Dog, My Family, Vacation"
                 value={name}
@@ -110,11 +110,11 @@ export const CustomLabelsManager: React.FC<CustomLabelsManagerProps> = ({ profil
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Associated AI Labels</label>
+            <label className="block text-sm font-medium mb-1">Libellés IA associés</label>
             <div className="flex items-center gap-2">
               <div className="flex-grow">
                 <AutocompleteInput
-                    placeholder="Type an AI label to add..."
+                    placeholder="Tape un libellé IA à ajouter..."
                     value={currentAILabel}
                     onChange={setCurrentAILabel}
                     suggestions={availableSuggestions}
@@ -152,16 +152,16 @@ export const CustomLabelsManager: React.FC<CustomLabelsManagerProps> = ({ profil
             )}
             <button onClick={handleSave} className="flex items-center gap-2 px-4 py-2 bg-primary text-white font-semibold rounded-md hover:bg-primary-dark transition">
               {editingLabel ? <Save className="w-5 h-5"/> : <PlusCircle className="w-5 h-5"/>}
-              {editingLabel ? 'Save Changes' : 'Create Label'}
+              {editingLabel ? 'Enregistrer' : 'Créer le libellé'}
             </button>
           </div>
         </div>
 
         {/* List of existing labels */}
         <div className="space-y-3 pt-4 border-t border-gray-200 dark:border-gray-700">
-          <h3 className="text-lg font-bold">Existing Labels</h3>
+          <h3 className="text-lg font-bold">Libellés existants</h3>
           {(profile.customLabels ?? []).length === 0 ? (
-              <p className="text-gray-500 text-sm">No custom labels created yet.</p>
+              <p className="text-gray-500 text-sm">Aucun libellé personnalisé pour l'instant.</p>
           ) : (
               <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
                 {(profile.customLabels ?? []).map(label => (

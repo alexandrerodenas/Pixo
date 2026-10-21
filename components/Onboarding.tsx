@@ -61,7 +61,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onProfileSave }) => {
           {/* Hero Section */}
           <div className="max-w-4xl mx-auto mb-16">
             <div className="flex justify-center items-center mb-6">
-              <img src="/logo.png" alt="Pixo Logo" className="w-24 h-24" />
+              <img src="/logo.png" alt="Logo Pixo" className="w-24 h-24" />
             </div>
             <h1 className="text-4xl md:text-6xl font-bold text-primary dark:text-primary-light mb-4 leading-tight">
               Welcome to Pixo

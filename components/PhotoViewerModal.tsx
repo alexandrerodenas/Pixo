@@ -37,7 +37,7 @@ const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({ photo, onClose }) =
       <div className="fixed inset-0 bg-black/70 z-40 flex items-center justify-center" onClick={onClose}>
         <div className="relative w-full max-w-4xl max-h-[90vh] bg-white dark:bg-gray-800 rounded-lg shadow-2xl flex flex-col md:flex-row" onClick={e => e.stopPropagation()}>
           <div className="md:w-2/3 bg-black/90 flex items-center justify-center rounded-l-lg">
-            <img src={photo.objectURL} alt="Enlarged view" className="max-w-full max-h-[90vh] md:max-h-[85vh] object-contain"/>
+            <img src={photo.objectURL} alt="Vue agrandie" className="max-w-full max-h-[90vh] md:max-h-[85vh] object-contain"/>
           </div>
           <div className="md:w-1/3 p-6 flex flex-col overflow-y-auto">
             <button onClick={onClose} className="absolute top-3 right-3 p-1.5 bg-gray-200/50 dark:bg-gray-700/50 rounded-full hover:bg-red-500 hover:text-white transition">
@@ -46,7 +46,7 @@ const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({ photo, onClose }) =
             {isAnalysisPending ? (
                 <div className="flex flex-col items-center justify-center h-full text-gray-500">
                   <Spinner className="w-10 h-10 mb-2"/>
-                  <p>Analyzing...</p>
+                  <p>Analyse en cours...</p>
                 </div>
             ) : (
                 <div className="space-y-6">
@@ -97,7 +97,7 @@ const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({ photo, onClose }) =
                   )}
 
                   <div>
-                    <h3 className="text-lg font-bold mb-3 flex items-center gap-2"><Bot className="w-5 h-5 text-secondary" /> AI Classifications</h3>
+                    <h3 className="text-lg font-bold mb-3 flex items-center gap-2"><Bot className="w-5 h-5 text-secondary" /> Classifications IA</h3>
                     <ul className="space-y-3">
                       {photo.classifications.length > 0 ? photo.classifications.map((p, i) => (
                           <li key={`class-${i}`} className="text-sm">
@@ -109,12 +109,12 @@ const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({ photo, onClose }) =
                               <div className="bg-primary h-1.5 rounded-full" style={{width: `${p.score * 100}%`}}></div>
                             </div>
                           </li>
-                      )) : <p className="text-gray-500 text-sm">No classifications found.</p>}
+                      )) : <p className="text-gray-500 text-sm">Aucune classification trouvée.</p>}
                     </ul>
                   </div>
 
                   <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-                    <h3 className="text-lg font-bold mb-3 flex items-center gap-2"><Boxes className="w-5 h-5 text-secondary" /> Detected Objects</h3>
+                    <h3 className="text-lg font-bold mb-3 flex items-center gap-2"><Boxes className="w-5 h-5 text-secondary" /> Objets détectés</h3>
                     <ul className="space-y-3">
                       {photo.detections.length > 0 ? photo.detections.map((p, i) => (
                           <li key={`detect-${i}`} className="text-sm">
@@ -126,7 +126,7 @@ const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({ photo, onClose }) =
                               <div className="bg-accent h-1.5 rounded-full" style={{width: `${p.score * 100}%`}}></div>
                             </div>
                           </li>
-                      )) : <p className="text-gray-500 text-sm">No objects detected.</p>}
+                      )) : <p className="text-gray-500 text-sm">Aucun objet détecté.</p>}
                     </ul>
                   </div>
                 </div>

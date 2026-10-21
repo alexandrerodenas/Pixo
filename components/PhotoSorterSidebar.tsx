@@ -128,7 +128,7 @@ const PhotoSorterSidebar: React.FC<PhotoSorterSidebarProps> = ({
         <div className="flex-1 flex flex-col p-4 overflow-y-auto">
           {/* Header */}
           <div className={`hidden lg:flex items-center gap-3 mb-6 transition-all duration-300 ${isOpen ? 'justify-start' : 'justify-center'}`}>
-            <img src="/logo.png" alt="Pixo Logo" className="w-10 h-10 shrink-0" />
+            <img src="/logo.png" alt="Logo Pixo" className="w-10 h-10 shrink-0" />
             <h1 className={`text-2xl font-bold tracking-tight whitespace-nowrap overflow-hidden transition-opacity ${isOpen ? 'opacity-100' : 'opacity-0'}`}>Pixo</h1>
           </div>
 
@@ -136,11 +136,11 @@ const PhotoSorterSidebar: React.FC<PhotoSorterSidebarProps> = ({
           <div
               role="button"
               tabIndex={0}
-              aria-label="Open profile settings"
+              aria-label="Ouvrir les réglages du profil"
               onClick={onOpenProfileSettings}
               onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onOpenProfileSettings()}
               className={`flex items-center gap-3 mb-8 p-3 bg-gray-100 dark:bg-gray-700/60 rounded-lg cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600/80 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${isOpen ? 'justify-between' : 'lg:justify-center'}`}
-              title={isOpen ? '' : 'Profile Settings'}
+              title={isOpen ? '' : 'Réglages du profil'}
           >
             <div className={`flex items-center gap-3 overflow-hidden`}>
               <div className="w-10 h-10 bg-primary text-white flex items-center justify-center rounded-full font-bold text-lg shrink-0">
@@ -148,7 +148,7 @@ const PhotoSorterSidebar: React.FC<PhotoSorterSidebarProps> = ({
               </div>
               <div className={`overflow-hidden whitespace-nowrap transition-opacity ${isOpen ? 'opacity-100' : 'opacity-0 w-0'}`}>
                 <p className="font-semibold text-gray-800 dark:text-gray-100 truncate" title={userProfile.firstName}>{userProfile.firstName}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">View settings</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Voir les réglages</p>
               </div>
             </div>
             <Settings2 className={`w-5 h-5 text-gray-500 dark:text-gray-400 shrink-0 transition-opacity ${isOpen ? 'opacity-100' : 'opacity-0'}`} />
@@ -156,13 +156,13 @@ const PhotoSorterSidebar: React.FC<PhotoSorterSidebarProps> = ({
 
           {/* Directory Loader */}
           <div className="mb-6">
-            <label className={`font-semibold mb-2 flex items-center gap-2 transition-all ${isOpen ? '' : 'lg:justify-center'}`}><FolderOpen className="w-5 h-5 text-secondary shrink-0" /> <span className={`transition-opacity ${isOpen ? 'opacity-100' : 'opacity-0 lg:hidden'}`}>Load Photos</span></label>
+            <label className={`font-semibold mb-2 flex items-center gap-2 transition-all ${isOpen ? '' : 'lg:justify-center'}`}><FolderOpen className="w-5 h-5 text-secondary shrink-0" /> <span className={`transition-opacity ${isOpen ? 'opacity-100' : 'opacity-0 lg:hidden'}`}>Charger les photos</span></label>
             <div className="flex gap-2">
               <button
                   onClick={onLoadPhotos}
                   disabled={isLoading || !isApiSupported}
                   className={`w-full px-4 py-2 bg-primary text-white font-semibold rounded-md hover:bg-primary-dark transition disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center gap-2 ${isOpen ? 'justify-center' : 'lg:justify-center'}`}
-                  title={!isApiSupported ? "Your browser is not supported for this feature." : isPhoneLibrary() ? "Load every photo on this phone" : "Select a directory to load photos"}
+                  title={!isApiSupported ? "Ton navigateur ne prend pas en charge cette fonction." : isPhoneLibrary() ? "Charger toutes les photos de ce téléphone" : "Choisir un dossier pour charger les photos"}
               >
                 {isLoading ? <Spinner className="w-5 h-5"/> : (isOpen ? (isPhoneLibrary() ? t('button.scanPhone') : t('button.selectDirectory')) : <FolderOpen className="w-5 h-5"/>)}
               </button>
@@ -196,24 +196,24 @@ const PhotoSorterSidebar: React.FC<PhotoSorterSidebarProps> = ({
           {/* Actions */}
           <div className="space-y-2">
             <div className="grid grid-cols-2 gap-2">
-              <ActionButton onClick={onClearSelection} disabled={selectedPhotoCount === 0} title="Clear All" className="bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-sm" icon={<XSquare className="w-5 h-5" />}>Clear All</ActionButton>
-              <ActionButton onClick={onSelectAll} disabled={isLoading || noAnalyzedPhotos} title="Select All" openTitle={noAnalyzedPhotos && !isLoading ? "No analyzed photos to select" : "Select all analyzed photos"} className="bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-sm" icon={<CheckSquare className="w-5 h-5" />}>Select All</ActionButton>
+              <ActionButton onClick={onClearSelection} disabled={selectedPhotoCount === 0} title="Tout effacer" className="bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-sm" icon={<XSquare className="w-5 h-5" />}>Clear All</ActionButton>
+              <ActionButton onClick={onSelectAll} disabled={isLoading || noAnalyzedPhotos} title="Tout sélectionner" openTitle={noAnalyzedPhotos && !isLoading ? "Aucune photo analysée à sélectionner" : "Sélectionner toutes les photos analysées"} className="bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-sm" icon={<CheckSquare className="w-5 h-5" />}>Select All</ActionButton>
             </div>
-            <ActionButton onClick={onApplyRules} disabled={isLoading || noAnalyzedPhotos} title="Apply Manual Rules" openTitle={noAnalyzedPhotos && !isLoading ? "No analyzed photos to apply rules to" : "Apply custom rules to all analyzed photos"} className="bg-secondary text-white hover:bg-secondary-dark" icon={<Zap className="w-5 h-5"/>}>Apply Rules</ActionButton>
-            <ActionButton onClick={onCreateRuleFromSelection} disabled={selectedPhotoCount === 0} title="Create Rule from Selection" openTitle={selectedPhotoCount > 0 ? "Create new rules from selected photos" : "Select photos to create rules from"} className="bg-accent text-white hover:bg-accent-dark" icon={<Wand2 className="w-5 h-5"/>}>Create Rule</ActionButton>
+            <ActionButton onClick={onApplyRules} disabled={isLoading || noAnalyzedPhotos} title="Appliquer les règles" openTitle={noAnalyzedPhotos && !isLoading ? "Aucune photo analysée à laquelle appliquer des règles" : "Apply custom rules to all analyzed photos"} className="bg-secondary text-white hover:bg-secondary-dark" icon={<Zap className="w-5 h-5"/>}>Apply Rules</ActionButton>
+            <ActionButton onClick={onCreateRuleFromSelection} disabled={selectedPhotoCount === 0} title="Créer une règle depuis la sélection" openTitle={selectedPhotoCount > 0 ? "Créer de nouvelles règles depuis les photos sélectionnées" : "Select photos to create rules from"} className="bg-accent text-white hover:bg-accent-dark" icon={<Wand2 className="w-5 h-5"/>}>Create Rule</ActionButton>
 
             {/* Deduplication & Blur Actions */}
             <div className="border-t border-gray-200 dark:border-gray-700 pt-2 space-y-2">
-              <ActionButton onClick={onFindDuplicates} disabled={isLoading || noAnalyzedPhotos} title="Find Duplicates" className="bg-purple-600 text-white hover:bg-purple-700" icon={<Copy className="w-5 h-5"/>}>Find Duplicates</ActionButton>
+              <ActionButton onClick={onFindDuplicates} disabled={isLoading || noAnalyzedPhotos} title="Trouver les doublons" className="bg-purple-600 text-white hover:bg-purple-700" icon={<Copy className="w-5 h-5"/>}>Trouver les doublons</ActionButton>
               {isolateDuplicates ? (
-                  <ActionButton onClick={onToggleIsolateDuplicates} disabled={false} title="Show All Photos" className="bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-900/50 dark:text-purple-300" icon={<Eye className="w-5 h-5"/>}>Show All</ActionButton>
+                  <ActionButton onClick={onToggleIsolateDuplicates} disabled={false} title="Afficher toutes les photos" className="bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-900/50 dark:text-purple-300" icon={<Eye className="w-5 h-5"/>}>Show All</ActionButton>
               ) : null}
 
-              <ActionButton onClick={onToggleIsolateBlurry} disabled={blurryPhotoCount === 0 && !isolateBlurry} title={isolateBlurry ? "Show all photos" : `Isolate Blurry (${blurryPhotoCount})`} className="bg-orange-500 text-white hover:bg-orange-600" icon={<AlertTriangle className="w-5 h-5"/>}>{isolateBlurry ? "Show All" : `Blurry (${blurryPhotoCount})`}</ActionButton>
+              <ActionButton onClick={onToggleIsolateBlurry} disabled={blurryPhotoCount === 0 && !isolateBlurry} title={isolateBlurry ? "Afficher toutes les photos" : `Isoler les floues (${blurryPhotoCount})`} className="bg-orange-500 text-white hover:bg-orange-600" icon={<AlertTriangle className="w-5 h-5"/>}>{isolateBlurry ? "Show All" : `Blurry (${blurryPhotoCount})`}</ActionButton>
             </div>
 
-            <ActionButton onClick={onToggleIsolateSelection} disabled={selectedPhotoCount === 0 && !isolateSelection} title={isolateSelection ? "Show all photos" : "Isolate Selection"} className="bg-blue-500 text-white hover:bg-blue-600" icon={isolateSelection ? <Eye className="w-5 h-5"/> : <EyeOff className="w-5 h-5"/>}>{isolateSelection ? "Show All" : "Isolate"}</ActionButton>
-            <ActionButton onClick={onToggleIsolateSaved} disabled={savedPhotoCount === 0 && !isolateSaved} title={isolateSaved ? "Show all photos" : `Isolate Saved (${savedPhotoCount})`} className="bg-pink-500 text-white hover:bg-pink-600" icon={<Heart className="w-5 h-5 fill-current"/>}>{isolateSaved ? "Show All" : `Isolate (${savedPhotoCount})`}</ActionButton>
+            <ActionButton onClick={onToggleIsolateSelection} disabled={selectedPhotoCount === 0 && !isolateSelection} title={isolateSelection ? "Afficher toutes les photos" : "Isoler la sélection"} className="bg-blue-500 text-white hover:bg-blue-600" icon={isolateSelection ? <Eye className="w-5 h-5"/> : <EyeOff className="w-5 h-5"/>}>{isolateSelection ? "Show All" : "Isolate"}</ActionButton>
+            <ActionButton onClick={onToggleIsolateSaved} disabled={savedPhotoCount === 0 && !isolateSaved} title={isolateSaved ? "Afficher toutes les photos" : `Isoler les gardées (${savedPhotoCount})`} className="bg-pink-500 text-white hover:bg-pink-600" icon={<Heart className="w-5 h-5 fill-current"/>}>{isolateSaved ? "Show All" : `Isolate (${savedPhotoCount})`}</ActionButton>
             <ActionButton onClick={() => onMoveSavedPhotos()} disabled={savedPhotoCount === 0} title={`Move Saved (${savedPhotoCount})`} className="bg-green-600 text-white hover:bg-green-700" icon={<Save className="w-5 h-5"/>}>{`Move (${savedPhotoCount})`}</ActionButton>
             <ActionButton onClick={onDeleteSelected} disabled={selectedPhotoCount === 0} title={`Delete Selected (${selectedPhotoCount})`} className="bg-red-600 text-white hover:bg-red-700" icon={<Trash2 className="w-5 h-5"/>}>{`Delete (${selectedPhotoCount})`}</ActionButton>
           </div>
@@ -223,21 +223,21 @@ const PhotoSorterSidebar: React.FC<PhotoSorterSidebarProps> = ({
         <div className="mt-auto p-4 border-t border-gray-200 dark:border-gray-700 shrink-0">
           <div className={isOpen ? 'opacity-100 transition-opacity' : 'opacity-0 lg:hidden'}>
             <div className="flex justify-between items-center text-sm font-medium mb-2">
-              <span>Total Photos</span>
+              <span>Photos au total</span>
               <span className="px-2 py-0.5 bg-primary/20 text-primary rounded-full">{totalPhotoCount}</span>
             </div>
             <div className="flex justify-between items-center text-sm font-medium mb-2">
-              <span>Selected</span>
+              <span>Sélectionnées</span>
               <span className="px-2 py-0.5 bg-accent/20 text-accent rounded-full">{selectedPhotoCount}</span>
             </div>
             <div className="flex justify-between items-center text-sm font-medium">
-              <span>Saved</span>
+              <span>Gardées</span>
               <span className="px-2 py-0.5 bg-pink-500/20 text-pink-500 rounded-full">{savedPhotoCount}</span>
             </div>
 
             {processingQueueCount > 0 && (
                 <div className="flex justify-between items-center text-sm font-medium mt-2">
-                  <span>Processing</span>
+                  <span>En cours</span>
                   <span className="px-2 py-0.5 bg-blue-500/20 text-blue-500 rounded-full flex items-center gap-1.5">
                         <Spinner className="w-3 h-3 text-blue-500" />
                     {processingQueueCount}
@@ -259,11 +259,11 @@ const PhotoSorterSidebar: React.FC<PhotoSorterSidebarProps> = ({
           <button
               onClick={onToggle}
               className="hidden lg:flex items-center w-full mt-4 p-2 font-semibold rounded-md transition-colors bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600"
-              title={isOpen ? "Collapse menu" : "Expand menu"}
+              title={isOpen ? "Replier le menu" : "Déplier le menu"}
           >
             <div className={`flex items-center gap-3 ${isOpen ? 'justify-start' : 'justify-center' } w-full`}>
               <ChevronLeft className={`w-5 h-5 transition-transform shrink-0 ${isOpen ? '' : 'rotate-180'}`} />
-              <span className={`whitespace-nowrap transition-opacity duration-200 ${isOpen ? 'opacity-100' : 'opacity-0 w-0'}`}>Collapse</span>
+              <span className={`whitespace-nowrap transition-opacity duration-200 ${isOpen ? 'opacity-100' : 'opacity-0 w-0'}`}>Replier</span>
             </div>
           </button>
         </div>

@@ -144,24 +144,24 @@ const PhotoContent: React.FC<PhotoContentProps> = ({
     }
 
     if (photosToShow.size === 0) {
-      let title = "No Matching Photos";
-      let message = "No photos match the current criteria. Try adjusting your search.";
+      let title = "Aucune photo correspondante";
+      let message = "Aucune photo ne correspond aux critères. Essaie de modifier ta recherche.";
       let Icon = Filter;
 
       if (isolateDuplicates) {
-        title = "No Duplicates Found";
-        message = "Great news! No duplicates were detected in your current set.";
+        title = "Aucun doublon trouvé";
+        message = "Bonne nouvelle ! Aucun doublon dans cette sélection.";
         Icon = Copy;
       } else if (isolateSelection) {
-        title = "No Selected Photos";
+        title = "Aucune photo sélectionnée";
         message = "You're in isolation mode, but no photos are selected. Clear the isolation to see all photos.";
         Icon = EyeOff;
       } else if (isolateSaved) {
-        title = "No Saved Photos";
+        title = "Aucune photo gardée";
         message = "You're in isolation mode, but no photos are saved. Click the heart on photos to save them.";
         Icon = Heart;
       } else if (isolateBlurry) {
-        title = "No Blurry Photos";
+        title = "Aucune photo floue";
         message = "Excellent! All your photos appear to be sharp.";
         Icon = AlertTriangle;
       }
@@ -181,8 +181,8 @@ const PhotoContent: React.FC<PhotoContentProps> = ({
         return (
             <div className="flex flex-col items-center justify-center h-full text-center text-gray-500 dark:text-gray-400">
               <Filter className="w-24 h-24 mb-4 text-gray-300 dark:text-gray-600" />
-              <h2 className="text-2xl font-semibold">No Matching Photos</h2>
-              <p className="mt-2 max-w-sm">No photos match your label filter. Try a different search term.</p>
+              <h2 className="text-2xl font-semibold">Aucune photo correspondante</h2>
+              <p className="mt-2 max-w-sm">Aucune photo ne correspond à ton filtre. Essaie un autre terme.</p>
             </div>
         );
       }

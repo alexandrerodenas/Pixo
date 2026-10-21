@@ -29,13 +29,13 @@ const ModelLoadingIndicator: React.FC<{ status: ModelsLoadState }> = ({ status }
 
   return (
       <div className="mt-4 mb-2 p-3 bg-gray-100 dark:bg-gray-700/50 rounded-lg text-sm space-y-2 transition-all duration-300">
-        <h4 className="font-semibold text-center text-gray-600 dark:text-gray-300 text-xs uppercase tracking-wider">AI Models Status</h4>
+        <h4 className="font-semibold text-center text-gray-600 dark:text-gray-300 text-xs uppercase tracking-wider">État des modèles IA</h4>
         <div className="flex items-center justify-between">
           <span className="text-gray-700 dark:text-gray-200">Classification</span>
           <StatusIcon status={status.classification} />
         </div>
         <div className="flex items-center justify-between">
-          <span className="text-gray-700 dark:text-gray-200">Object Detection</span>
+          <span className="text-gray-700 dark:text-gray-200">Détection d'objets</span>
           <StatusIcon status={status.detection} />
         </div>
       </div>

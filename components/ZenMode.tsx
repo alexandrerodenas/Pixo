@@ -116,8 +116,8 @@ const ZenMode: React.FC<ZenModeProps> = ({
     return (
         <div className="flex flex-col items-center justify-center h-full text-center p-8 bg-gray-900 text-white">
           <CheckCircle2 className="w-20 h-20 text-green-500 mb-4" />
-          <h2 className="text-2xl font-bold">All done!</h2>
-          <p className="text-gray-400 mt-2">No photos left to review in this mode.</p>
+          <h2 className="text-2xl font-bold">Terminé !</h2>
+          <p className="text-gray-400 mt-2">Plus aucune photo à examiner dans ce mode.</p>
           <button
               onClick={onClose}
               className="mt-6 px-6 py-2 bg-primary text-white rounded-full font-semibold hover:bg-primary-dark transition-colors"
@@ -143,11 +143,11 @@ const ZenMode: React.FC<ZenModeProps> = ({
         {/* Header */}
         <div className="h-16 flex items-center justify-between px-6 z-10 bg-gradient-to-b from-black/80 to-transparent">
           <div className="flex items-center gap-4">
-            <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors" title="Exit Zen Mode">
+            <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors" title="Quitter le mode Zen">
               <X className="w-6 h-6" />
             </button>
             <div className="flex flex-col">
-              <span className="font-bold text-lg tracking-tight">Zen Mode</span>
+              <span className="font-bold text-lg tracking-tight">Mode Zen</span>
               <span className="text-xs text-gray-400 font-mono">{currentIndex + 1} / {photos.length}</span>
             </div>
           </div>
@@ -156,7 +156,7 @@ const ZenMode: React.FC<ZenModeProps> = ({
             <button
                 onClick={() => setShowShortcuts(!showShortcuts)}
                 className={`p-2 rounded-full transition-colors ${showShortcuts ? 'bg-primary text-white' : 'hover:bg-white/10 text-gray-400'}`}
-                title="Toggle Shortcuts"
+                title="Afficher les raccourcis"
             >
               <Keyboard className="w-5 h-5" />
             </button>
@@ -194,7 +194,7 @@ const ZenMode: React.FC<ZenModeProps> = ({
                 <div className="relative group">
                   <img
                       src={currentPhoto.objectURL}
-                      alt="Zen review"
+                      alt="Revue Zen"
                       style={{ transform: `rotate(${rotation}deg)`, transition: 'transform 0.2s' }}
                       className="max-w-full max-h-[75vh] object-contain select-none rounded-lg shadow-[0_0_50px_rgba(0,0,0,0.5)] border border-white/5"
                   />
@@ -262,7 +262,7 @@ const ZenMode: React.FC<ZenModeProps> = ({
                     <kbd className="bg-white/20 px-2 py-1 rounded font-mono shadow-inner">←</kbd>
                     <kbd className="bg-white/20 px-2 py-1 rounded font-mono shadow-inner">→</kbd>
                   </div>
-                  <span className="text-gray-400 font-medium uppercase tracking-wider">Navigate</span>
+                  <span className="text-gray-400 font-medium uppercase tracking-wider">Naviguer</span>
                 </div>
                 <div className="flex items-center gap-4 text-xs bg-white/5 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10">
                   <div className="flex gap-1">
@@ -270,15 +270,15 @@ const ZenMode: React.FC<ZenModeProps> = ({
                     <kbd className="bg-white/20 px-2 py-1 rounded font-mono shadow-inner">←</kbd>
                     <kbd className="bg-white/20 px-2 py-1 rounded font-mono shadow-inner">→</kbd>
                   </div>
-                  <span className="text-gray-400 font-medium uppercase tracking-wider">Rotate</span>
+                  <span className="text-gray-400 font-medium uppercase tracking-wider">Rotation</span>
                 </div>
                 <div className="flex items-center gap-4 text-xs bg-white/5 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10">
                   <kbd className="bg-white/20 px-2 py-1 rounded font-mono shadow-inner w-8 text-center">P</kbd>
-                  <span className="text-gray-400 font-medium uppercase tracking-wider">Favorite</span>
+                  <span className="text-gray-400 font-medium uppercase tracking-wider">Favori</span>
                 </div>
                 <div className="flex items-center gap-4 text-xs bg-white/5 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10">
                   <kbd className="bg-white/20 px-2 py-1 rounded font-mono shadow-inner">DEL</kbd>
-                  <span className="text-gray-400 font-medium uppercase tracking-wider">Delete</span>
+                  <span className="text-gray-400 font-medium uppercase tracking-wider">Supprimer</span>
                 </div>
               </motion.div>
           )}
@@ -302,20 +302,20 @@ const ZenMode: React.FC<ZenModeProps> = ({
                     <div className="w-20 h-20 bg-green-500/10 text-green-500 flex items-center justify-center rounded-3xl mb-6 rotate-3">
                       <Save className="w-10 h-10" />
                     </div>
-                    <h3 className="text-3xl font-bold mb-3 tracking-tight">Ready to export?</h3>
+                    <h3 className="text-3xl font-bold mb-3 tracking-tight">Prêt à exporter ?</h3>
                     <p className="text-gray-400 mb-8 leading-relaxed">
                       You've selected <span className="text-white font-bold">{photos.filter(p => p.isSaved).length}</span> photos to keep. They will be moved to your chosen folder.
                     </p>
 
                     <div className="w-full text-left mb-8">
-                      <label className="block text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500 mb-3 ml-1">Destination Folder</label>
+                      <label className="block text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500 mb-3 ml-1">Dossier de destination</label>
                       <div className="relative">
                         <input
                             type="text"
                             value={customFolderName}
                             onChange={(e) => setCustomFolderName(e.target.value)}
                             className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 focus:ring-2 focus:ring-primary outline-none transition-all text-lg font-medium"
-                            placeholder="Enter folder name..."
+                            placeholder="Nom du dossier..."
                         />
                       </div>
                       <p className="mt-3 flex items-center gap-2 text-[10px] text-gray-500 italic ml-1">

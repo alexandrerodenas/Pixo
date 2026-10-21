@@ -45,9 +45,9 @@ export const usePhotoSelection = (
   const selectAllFiltered = useCallback((photosToSelect: Photo[], options?: { isManualApplication?: boolean }) => {
     if (photosToSelect.length === 0) {
       if (options?.isManualApplication) {
-        setStatusMessage("No photos matched your rules. ✨");
+        setStatusMessage("Aucune photo ne correspond à tes règles. ✨");
       } else {
-        setStatusMessage("No photos match the current criteria to select.");
+        setStatusMessage("Aucune photo ne correspond aux critères pour la sélection.");
       }
       return;
     }
@@ -78,7 +78,7 @@ export const usePhotoSelection = (
 
   const clearSelectionFiltered = useCallback((photosToClear: Photo[]) => {
     if (photosToClear.length === 0) {
-      setStatusMessage("No photos are currently selected to clear.");
+      setStatusMessage("Aucune photo sélectionnée à effacer.");
       return;
     }
 

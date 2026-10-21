@@ -35,24 +35,24 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ profile, setProfil
         {/* General Settings */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label className="block font-semibold mb-1">First Name</label>
+            <label className="block font-semibold mb-1">Prénom</label>
             <input type="text" value={profile.firstName} onChange={e => handleInputChange('firstName', e.target.value)} className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary"/>
           </div>
           <div>
-            <label className="block font-semibold mb-1">"Saved" Folder Name</label>
+            <label className="block font-semibold mb-1">Nom du dossier des photos gardées</label>
             <input type="text" value={profile.savedFolderName} onChange={e => handleInputChange('savedFolderName', e.target.value)} className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary"/>
           </div>
           <div>
-            <label className="block font-semibold mb-1">Saved Operation</label>
+            <label className="block font-semibold mb-1">Action pour les photos gardées</label>
             <select value={profile.savedOperation || 'move'} onChange={e => handleInputChange('savedOperation', e.target.value)} className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary">
-              <option value="move">Move (Delete original)</option>
-              <option value="copy">Copy (Keep original)</option>
+              <option value="move">Déplacer (supprime l'original)</option>
+              <option value="copy">Copier (garde l'original)</option>
             </select>
           </div>
         </div>
 
         <div className="space-y-2">
-          <label className="block font-semibold">Thumbnail Size</label>
+          <label className="block font-semibold">Taille des miniatures</label>
           <div className="flex items-center p-1 bg-gray-200 dark:bg-gray-700 rounded-lg">
             {thumbnailSizes.map(size => (
                 <button
@@ -73,23 +73,23 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ profile, setProfil
         <div>
           <label className="flex items-center gap-2 cursor-pointer">
             <input type="checkbox" checked={profile.autoApplyRules} onChange={e => handleInputChange('autoApplyRules', e.target.checked)} className="w-5 h-5 rounded text-primary focus:ring-primary"/>
-            <span>Automatically apply all rules on photo load</span>
+            <span>Appliquer automatiquement les règles au chargement</span>
           </label>
         </div>
 
         {/* Blur Detection Settings */}
         <div className="space-y-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-          <h3 className="text-lg font-bold">Blur Detection Sensitivity</h3>
+          <h3 className="text-lg font-bold">Sensibilité de détection du flou</h3>
           <div className="p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg space-y-4 border border-gray-200 dark:border-gray-700">
             <div className="flex items-start gap-3 text-sm text-gray-600 dark:text-gray-400">
               <Info className="w-5 h-5 flex-shrink-0 text-secondary" />
               <div>
-                <p className="font-semibold mb-1">Recommended Thresholds (Variance Score):</p>
+                <p className="font-semibold mb-1">Seuils recommandés (score de variance) :</p>
                 <ul className="list-disc list-inside space-y-0.5">
-                  <li><span className="font-medium text-gray-800 dark:text-gray-200">0 - 60:</span> Very blurry / Out of focus</li>
-                  <li><span className="font-medium text-gray-800 dark:text-gray-200">60 - 150:</span> Soft / Minor motion blur</li>
-                  <li><span className="font-medium text-gray-800 dark:text-gray-200">150 - 300:</span> Acceptable sharpness</li>
-                  <li><span className="font-medium text-gray-800 dark:text-gray-200">300+:</span> Very sharp / High detail</li>
+                  <li><span className="font-medium text-gray-800 dark:text-gray-200">0 - 60:</span> Très flou / hors focus</li>
+                  <li><span className="font-medium text-gray-800 dark:text-gray-200">60 - 150:</span> Doux / léger flou de bougé</li>
+                  <li><span className="font-medium text-gray-800 dark:text-gray-200">150 - 300:</span> Netteté correcte</li>
+                  <li><span className="font-medium text-gray-800 dark:text-gray-200">300+:</span> Très net / beaucoup de détails</li>
                 </ul>
               </div>
             </div>
@@ -97,7 +97,7 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ profile, setProfil
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <div className="flex justify-between mb-1">
-                  <label className="block text-sm font-semibold text-orange-600 dark:text-orange-400">Blurry Threshold</label>
+                  <label className="block text-sm font-semibold text-orange-600 dark:text-orange-400">Seuil de flou</label>
                   <span className="text-xs font-mono bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300 px-2 py-0.5 rounded">&lt; {blurThreshold}</span>
                 </div>
                 <input
@@ -109,12 +109,12 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ profile, setProfil
                     onChange={e => handleBlurThresholdChange(parseInt(e.target.value))}
                     className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-600 accent-orange-500"
                 />
-                <p className="text-xs text-gray-500 mt-1">Photos scoring below this are marked <span className="font-bold text-orange-600">Blurry</span>.</p>
+                <p className="text-xs text-gray-500 mt-1">Les photos sous ce score sont marquées <span className="font-bold text-orange-600">floues</span>.</p>
               </div>
 
               <div>
                 <div className="flex justify-between mb-1">
-                  <label className="block text-sm font-semibold text-green-600 dark:text-green-400">Sharp Threshold</label>
+                  <label className="block text-sm font-semibold text-green-600 dark:text-green-400">Seuil de netteté</label>
                   <span className="text-xs font-mono bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 px-2 py-0.5 rounded">&gt; {sharpThreshold}</span>
                 </div>
                 <input
@@ -126,7 +126,7 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ profile, setProfil
                     onChange={e => handleSharpThresholdChange(parseInt(e.target.value))}
                     className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-600 accent-green-500"
                 />
-                <p className="text-xs text-gray-500 mt-1">Photos scoring above this are marked <span className="font-bold text-green-600">Sharp</span>.</p>
+                <p className="text-xs text-gray-500 mt-1">Les photos au-dessus de ce score sont marquées <span className="font-bold text-green-600">nettes</span>.</p>
               </div>
             </div>
           </div>
@@ -134,7 +134,7 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ profile, setProfil
 
         {/* Uncategorized Rule Section */}
         <div className="space-y-3 pt-4 border-t border-gray-200 dark:border-gray-700">
-          <h3 className="text-lg font-bold">Uncategorized Rule (Classification-based)</h3>
+          <h3 className="text-lg font-bold">Règle « Sans catégorie » (selon la classification)</h3>
           <p className="text-sm text-gray-500 dark:text-gray-400">
             If all AI **classification** scores for a photo are below this threshold, it will be classified as 'Uncategorized'. This helps filter out ambiguous images.
           </p>

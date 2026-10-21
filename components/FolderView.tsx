@@ -166,16 +166,16 @@ const FolderView: React.FC<FolderViewProps> = ({ photos, onSelectPhoto, onViewPh
                           <button
                               onClick={() => setGroupBy('classification')}
                               className={`p-1.5 rounded-sm transition-colors ${groupBy === 'classification' ? 'bg-white dark:bg-gray-800 text-primary shadow-sm' : 'text-gray-600 dark:text-gray-300 hover:bg-white/50 dark:hover:bg-gray-800/50'}`}
-                              aria-label="Group by classification"
-                              title="Group by classification"
+                              aria-label="Grouper par classification"
+                              title="Grouper par classification"
                           >
                             <Tag className="w-4 h-4" />
                           </button>
                           <button
                               onClick={() => setGroupBy('detection')}
                               className={`p-1.5 rounded-sm transition-colors ${groupBy === 'detection' ? 'bg-white dark:bg-gray-800 text-primary shadow-sm' : 'text-gray-600 dark:text-gray-300 hover:bg-white/50 dark:hover:bg-gray-800/50'}`}
-                              aria-label="Group by detected objects"
-                              title="Group by detected objects"
+                              aria-label="Grouper par objets détectés"
+                              title="Grouper par objets détectés"
                           >
                             <Boxes className="w-4 h-4" />
                           </button>
@@ -185,16 +185,16 @@ const FolderView: React.FC<FolderViewProps> = ({ photos, onSelectPhoto, onViewPh
                               <button
                                   onClick={() => setSortOrder('alpha')}
                                   className={`p-1.5 rounded-sm transition-colors ${sortOrder === 'alpha' ? 'bg-white dark:bg-gray-800 text-primary shadow-sm' : 'text-gray-600 dark:text-gray-300 hover:bg-white/50 dark:hover:bg-gray-800/50'}`}
-                                  aria-label="Sort alphabetically"
-                                  title="Sort alphabetically"
+                                  aria-label="Trier par ordre alphabétique"
+                                  title="Trier par ordre alphabétique"
                               >
                                 <ArrowDownAZ className="w-4 h-4" />
                               </button>
                               <button
                                   onClick={() => setSortOrder('count')}
                                   className={`p-1.5 rounded-sm transition-colors ${sortOrder === 'count' ? 'bg-white dark:bg-gray-800 text-primary shadow-sm' : 'text-gray-600 dark:text-gray-300 hover:bg-white/50 dark:hover:bg-gray-800/50'}`}
-                                  aria-label="Sort by photo count"
-                                  title="Sort by photo count"
+                                  aria-label="Trier par nombre de photos"
+                                  title="Trier par nombre de photos"
                               >
                                 <ArrowDown10 className="w-4 h-4" />
                               </button>
@@ -224,14 +224,14 @@ const FolderView: React.FC<FolderViewProps> = ({ photos, onSelectPhoto, onViewPh
                                       <button
                                           onClick={(e) => { e.stopPropagation(); onBulkSave(labelPhotos); }}
                                           className="p-1.5 rounded-full hover:bg-gray-300 dark:hover:bg-gray-600"
-                                          title={allInCategorySaved ? 'Unsave all in category' : 'Save all in category'}
+                                          title={allInCategorySaved ? 'Ne plus garder toute la catégorie' : 'Garder toute la catégorie'}
                                       >
                                         <Heart className={`w-4 h-4 text-pink-500 transition-colors ${allInCategorySaved ? 'fill-current' : ''}`} />
                                       </button>
                                       <button
                                           onClick={(e) => { e.stopPropagation(); onRequestDelete(labelPhotos); }}
                                           className="p-1.5 rounded-full hover:bg-red-200 dark:hover:bg-red-800/50"
-                                          title="Delete all in category"
+                                          title="Supprimer toute la catégorie"
                                       >
                                         <Trash2 className="w-4 h-4 text-red-600" />
                                       </button>
