@@ -6,6 +6,7 @@ import { useFileSystem } from './useFileSystem.ts';
 import { usePhotoAnalysis } from './usePhotoAnalysis.ts';
 import { usePhotoSelection } from './usePhotoSelection.ts';
 import { useProgressPersistence } from './useProgressPersistence.ts';
+import { useKeepScreenOn } from './useKeepScreenOn.ts';
 import { findDuplicateGroups } from '../services/duplicateDetection.ts';
 import { revokePhotoURLs } from '../services/photoUrls.ts';
 
@@ -68,6 +69,8 @@ export const usePhotoManager = ({ userProfile, onProfileUpdate, filterLabel }: U
     }
     return count;
   }, [photos]);
+
+  useKeepScreenOn(processingQueueCount > 0);
 
   // --- Sub-hook for File System Logic ---
   const {
