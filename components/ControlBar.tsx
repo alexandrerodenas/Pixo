@@ -23,6 +23,7 @@ import {
 import { Spinner } from './ui.tsx';
 import AutocompleteInput from './AutocompleteInput.tsx';
 import { isPhoneLibrary } from '../services/phoneLibrary.ts';
+import { t } from '../services/i18n.ts';
 
 interface ControlBarProps {
   userProfile: UserProfile;
@@ -141,7 +142,7 @@ const ControlBar: React.FC<ControlBarProps> = ({
               className="flex items-center gap-2 px-3 py-1.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 text-sm whitespace-nowrap"
           >
             {isLoading ? <Spinner className="w-4 h-4 text-current" /> : isPhoneLibrary() ? <Smartphone className="w-4 h-4" /> : <FolderOpen className="w-4 h-4" />}
-            <span className="hidden sm:inline">{isPhoneLibrary() ? 'Scan Phone' : 'Open Folder'}</span>
+            <span className="hidden sm:inline">{isPhoneLibrary() ? t('button.scanPhone') : t('button.openFolder')}</span>
           </button>
         </div>
 

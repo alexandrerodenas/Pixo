@@ -1,4 +1,5 @@
 import { Capacitor, registerPlugin } from '@capacitor/core';
+import type { PluginListenerHandle } from '@capacitor/core';
 
 // Android app only: every photo on the phone, through the native PhotoLibrary plugin (MediaStore,
 // see android/.../PhotoLibraryPlugin.java). Replaces the folder picker, which Android's WebView lacks.
@@ -19,25 +20,65 @@ interface PhotoLibraryPlugin {
   movePhotos(options: { mediaIds: number[]; folder: string }): Promise<{ done: number[] }>;
   copyPhotos(options: { mediaIds: number[]; folder: string }): Promise<{ done: number[] }>;
   getDeviceName(): Promise<{ name: string }>;
+  getSharedPhotos(): Promise<{ photos: SharedPhoto[] }>;
+  addListener(event: 'shared', listener: (data: { photos: SharedPhoto[] }) => void): Promise<PluginListenerHandle>;
+}
+
+interface SharedPhoto {
+  index: number; // position in the share, served at SHARED_ENDPOINT
+  name: string;
+  size: number;
+  lastModified: number;
 }
 
 const PhotoLibrary = registerPlugin<PhotoLibraryPlugin>('PhotoLibrary');
 
 // Served by PhotoLibraryWebViewClient.java
 const MEDIA_ENDPOINT = '/_pixo_media';
+const SHARED_ENDPOINT = '/_pixo_shared';
 // Photos per system consent dialog; keeps each request well under Android's IPC size limit
 const BATCH_SIZE = 500;
 
 export interface PhoneScanEntry {
   id: string; // "DCIM/Camera/IMG_0001.jpg", the photo's id in the app
   url: string; // full-size photo
-  thumbnailURL: string; // small system thumbnail
+  thumbnailURL?: string; // small system thumbnail (none for shared photos)
   size: number;
   lastModified: number;
 }
 
 // App photo id -> MediaStore id, filled by the last scan
 const mediaIds = new Map<string, number>();
+// Photos received through "Share to Pixo" (not in the phone's library, so view and analysis only)
+let sharedEntries: PhoneScanEntry[] = [];
+
+const toSharedEntry = (p: SharedPhoto): PhoneScanEntry => ({
+  id: `shared/${p.index}-${p.name}`,
+  url: `${SHARED_ENDPOINT}?i=${p.index}`,
+  thumbnailURL: '',
+  size: p.size,
+  lastModified: p.lastModified,
+});
+
+/** Photos shared to Pixo so far. Calls onNew with the ones received while the app is open. */
+export async function getSharedPhotos(onNew?: (entries: PhoneScanEntry[]) => void): Promise<PhoneScanEntry[]> {
+  if (!isPhoneLibrary()) return [];
+  if (!sharedEntries.length) {
+    const { photos } = await PhotoLibrary.getSharedPhotos();
+    sharedEntries = photos.map(toSharedEntry);
+  }
+  if (onNew) {
+    await PhotoLibrary.addListener('shared', ({ photos }) => {
+      const fresh = photos.map(toSharedEntry);
+      sharedEntries = [...sharedEntries, ...fresh];
+      onNew(fresh);
+    });
+  }
+  return sharedEntries;
+}
+
+/** Shared photos to keep in the library after a scan, which does not list them. */
+export const keptSharedPhotos = (): PhoneScanEntry[] => sharedEntries;
 
 export const isPhoneLibrary = (): boolean => Capacitor.getPlatform() === 'android';
 

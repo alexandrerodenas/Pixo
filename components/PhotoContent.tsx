@@ -6,6 +6,7 @@ import PhotoGrid from './PhotoGrid.tsx';
 import FolderView from './FolderView.tsx';
 import ZenMode from './ZenMode.tsx';
 import { isPhoneLibrary } from '../services/phoneLibrary.ts';
+import { t } from '../services/i18n.ts';
 import {
   FolderOpen,
   EyeOff,
@@ -136,8 +137,8 @@ const PhotoContent: React.FC<PhotoContentProps> = ({
       return (
           <div className="flex flex-col items-center justify-center h-full text-center text-gray-500 dark:text-gray-400">
             <FolderOpen className="w-24 h-24 mb-4 text-gray-300 dark:text-gray-600" />
-            <h2 className="text-2xl font-semibold">Your workspace is empty</h2>
-            <p className="mt-2 max-w-sm">{isPhoneLibrary() ? "Tap the phone button in the top bar to load every photo on your phone." : "Click 'Open Folder' in the top bar to begin your photo organizing adventure!"}</p>
+            <h2 className="text-2xl font-semibold">{t('empty.title')}</h2>
+            <p className="mt-2 max-w-sm">{isPhoneLibrary() ? t('empty.phone') : t('empty.folder')}</p>
           </div>
       );
     }

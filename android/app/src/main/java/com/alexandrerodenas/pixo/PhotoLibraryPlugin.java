@@ -15,6 +15,9 @@ import android.os.Build;
 import android.os.Environment;
 import android.provider.MediaStore;
 import android.provider.MediaStore.Images;
+import android.provider.OpenableColumns;
+import android.content.Intent;
+import com.getcapacitor.PluginListenerHandle;
 import android.provider.Settings;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.IntentSenderRequest;
@@ -46,6 +49,59 @@ public class PhotoLibraryPlugin extends Plugin {
 
     static final List<String> MIME_TYPES = java.util.Arrays.asList("image/jpeg", "image/png", "image/gif", "image/webp");
 
+    // Photos received through "Share to Pixo", kept until the app restarts. Index = position here.
+    private static final List<Uri> sharedUris = new java.util.concurrent.CopyOnWriteArrayList<>();
+    private static PhotoLibraryPlugin instance;
+
+    static Uri sharedUri(int index) {
+        return index >= 0 && index < sharedUris.size() ? sharedUris.get(index) : null;
+    }
+
+    /** Reads the photos of a SEND / SEND_MULTIPLE intent and tells the web app about them. */
+    static void receiveShare(Intent intent) {
+        if (intent == null || intent.getAction() == null) return;
+        List<Uri> uris = new ArrayList<>();
+        if (Intent.ACTION_SEND.equals(intent.getAction())) {
+            Uri uri = intent.getParcelableExtra(Intent.EXTRA_STREAM);
+            if (uri != null) uris.add(uri);
+        } else if (Intent.ACTION_SEND_MULTIPLE.equals(intent.getAction())) {
+            List<Uri> many = intent.getParcelableArrayListExtra(Intent.EXTRA_STREAM);
+            if (many != null) uris.addAll(many);
+        }
+        if (uris.isEmpty()) return;
+        // The intent is handled once: a rotation or a resume must not add the same photos again
+        intent.setAction(null);
+        int first = sharedUris.size();
+        sharedUris.addAll(uris);
+        if (instance != null) instance.notifyShared(first);
+    }
+
+    private void notifyShared(int first) {
+        JSArray photos = new JSArray();
+        for (int i = first; i < sharedUris.size(); i++) photos.put(describeShared(i));
+        JSObject data = new JSObject();
+        data.put("photos", photos);
+        notifyListeners("shared", data);
+    }
+
+    private JSObject describeShared(int index) {
+        Uri uri = sharedUris.get(index);
+        String name = "shared-" + index + ".jpg";
+        long size = 0;
+        try (Cursor c = getContext().getContentResolver().query(uri, new String[] { OpenableColumns.DISPLAY_NAME, OpenableColumns.SIZE }, null, null, null)) {
+            if (c != null && c.moveToFirst()) {
+                if (!c.isNull(0)) name = c.getString(0);
+                if (!c.isNull(1)) size = c.getLong(1);
+            }
+        } catch (Exception ignored) {}
+        JSObject p = new JSObject();
+        p.put("index", index);
+        p.put("name", name);
+        p.put("size", size);
+        p.put("lastModified", System.currentTimeMillis());
+        return p;
+    }
+
     private ActivityResultLauncher<String[]> permissionLauncher;
     private ActivityResultLauncher<IntentSenderRequest> consentLauncher;
     private PluginCall pendingPermissionCall;
@@ -54,6 +110,7 @@ public class PhotoLibraryPlugin extends Plugin {
 
     @Override
     public void load() {
+        instance = this;
         permissionLauncher = getActivity().registerForActivityResult(new ActivityResultContracts.RequestMultiplePermissions(), result -> {
             PluginCall call = pendingPermissionCall;
             pendingPermissionCall = null;
@@ -71,6 +128,16 @@ public class PhotoLibraryPlugin extends Plugin {
                 getBridge().execute(action);
             }
         });
+    }
+
+    /** Photos received through "Share to Pixo" that the app has not shown yet. */
+    @PluginMethod
+    public void getSharedPhotos(PluginCall call) {
+        JSArray photos = new JSArray();
+        for (int i = 0; i < sharedUris.size(); i++) photos.put(describeShared(i));
+        JSObject ret = new JSObject();
+        ret.put("photos", photos);
+        call.resolve(ret);
     }
 
     // --- Access ---

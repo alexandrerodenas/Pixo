@@ -4,6 +4,8 @@ import { PhotoStatus } from '../services/types.ts';
 import { revokePhotoURLs } from '../services/photoUrls.ts';
 import { restoreProgress, pruneProgress } from '../services/progressStore.ts';
 import * as phone from '../services/phoneLibrary.ts';
+import { t } from '../services/i18n.ts';
+import type { PhoneScanEntry } from '../services/phoneLibrary.ts';
 
 // Parallel file-system operations (deletions)
 const MAX_CONCURRENT_FS_OPS = 8;
@@ -103,7 +105,7 @@ export const useFileSystem = (
     const handle = await window.showDirectoryPicker();
     directoryHandleRef.current = handle;
     setIsLoading(true);
-    setStatusMessage('Scanning directory...');
+    setStatusMessage(t('scan.folder'));
 
     const filesToProcess: { path: string, handle: FileSystemFileHandle }[] = [];
     async function getFilesRecursively(dirHandle: FileSystemDirectoryHandle, path: string) {
@@ -124,13 +126,32 @@ export const useFileSystem = (
     }));
   }, [directoryHandleRef, setStatusMessage]);
 
+  const toScanned = (e: PhoneScanEntry): ScannedPhoto => ({
+    id: e.id,
+    objectURL: e.url,
+    thumbnailURL: e.thumbnailURL,
+    source: { size: e.size, lastModified: e.lastModified },
+  });
+
+  // Adds photos to the library as queued for analysis, keeping the ones already shown.
+  const addQueued = useCallback((scanned: ScannedPhoto[]) => {
+    setPhotos(prev => {
+      const next = new Map(prev);
+      for (const sp of scanned) {
+        if (next.has(sp.id)) continue;
+        next.set(sp.id, { ...sp, status: PhotoStatus.QUEUED, classifications: [], detections: [], selected: false });
+      }
+      return next;
+    });
+  }, [setPhotos]);
+
   // Lists every photo on the phone (Android app), asking for access the first time.
   const scanPhone = useCallback(async (): Promise<ScannedPhoto[]> => {
     if (!(await phone.hasPhotoAccess()) && !(await phone.requestPhotoAccess())) {
       throw new DOMException('Photo access denied', 'NotAllowedError');
     }
     setIsLoading(true);
-    setStatusMessage('Scanning your phone...');
+    setStatusMessage(t('scan.phone'));
     const entries = await phone.scanPhone(++scanGeneration);
     try { localStorage.setItem(PHONE_SCANNED_KEY, '1'); } catch { /* not critical */ }
     return entries.map(e => ({ id: e.id, objectURL: e.url, thumbnailURL: e.thumbnailURL, source: { size: e.size, lastModified: e.lastModified } }));
@@ -142,15 +163,17 @@ export const useFileSystem = (
     try {
       const isPhone = phone.isPhoneLibrary();
       const scanned = isPhone ? await scanPhone() : await scanFolder();
+      // Photos shared to Pixo are not in the phone's library, so the scan does not return them
+      if (isPhone) scanned.push(...(await phone.getSharedPhotos()).map(toScanned));
       setPhotos(new Map());
 
       if (scanned.length === 0) {
-        setStatusMessage(isPhone ? 'No photos found on this phone.' : 'No photos found in this directory. Try another one!');
+        setStatusMessage(isPhone ? t('scan.none.phone') : t('scan.none.folder'));
         setIsLoading(false);
         return;
       }
 
-      setStatusMessage(`Found ${scanned.length} photos. Restoring previous progress...`);
+      setStatusMessage(t('scan.found', { count: scanned.length }));
 
       // Revoke old blob URLs to prevent memory leak
       for (const photo of photos.values()) {
@@ -176,16 +199,24 @@ export const useFileSystem = (
     } catch (error) {
       const name = (error as DOMException).name;
       if (name === 'AbortError') {
-        setStatusMessage('Directory selection cancelled.');
+        setStatusMessage(t('scan.cancelled'));
       } else if (name === 'NotAllowedError') {
-        setStatusMessage('Pixo needs access to your photos. Allow it in the phone settings, then try again.');
+        setStatusMessage(t('scan.denied'));
       } else {
         console.error('Error loading photos:', error);
-        setStatusMessage('Could not load photos. Check console for details.');
+        setStatusMessage(t('scan.failed'));
       }
       setIsLoading(false);
     }
   }, [isApiSupported, photos, scanFolder, scanPhone, setPhotos, setStatusMessage]);
+
+  // Android app: photos shared to Pixo, both when the app is started by a share and while it is open.
+  useEffect(() => {
+    if (!phone.isPhoneLibrary()) return;
+    phone.getSharedPhotos(fresh => addQueued(fresh.map(toScanned)))
+      .then(entries => { if (entries.length > 0) addQueued(entries.map(toScanned)); })
+      .catch(console.warn);
+  }, [addQueued]);
 
   // Android app: when it is reopened (or restarted by the system), scan the phone again right away.
   const autoScanDoneRef = useRef(false);
@@ -203,7 +234,7 @@ export const useFileSystem = (
     const isPhone = phone.isPhoneLibrary();
     if (!isPhone && !directoryHandleRef.current) return;
 
-    setStatusMessage(`Deleting ${photosToDelete.length} photo(s)...`);
+    setStatusMessage(t('delete.progress', { count: photosToDelete.length }));
 
     // Delete a few files at a time, then remove from the UI only those really deleted,
     // so a failed deletion stays visible instead of silently disappearing.
@@ -232,9 +263,9 @@ export const useFileSystem = (
     deleted.forEach(revokePhotoURLs);
 
     if (deleted.length < photosToDelete.length) {
-      setStatusMessage(`Deleted ${deleted.length} of ${photosToDelete.length} photos. ${photosToDelete.length - deleted.length} could not be deleted and are still shown.`);
+      setStatusMessage(t('delete.partial', { done: deleted.length, count: photosToDelete.length, failed: photosToDelete.length - deleted.length }));
     } else {
-      setStatusMessage(`Successfully deleted ${deleted.length} photos. ✅`);
+      setStatusMessage(t('delete.done', { done: deleted.length }));
     }
   }, [directoryHandleRef, setPhotos, setStatusMessage]);
 
@@ -259,9 +290,10 @@ export const useFileSystem = (
         });
       }
       const failed = savedPhotos.length - done.size;
+      const key = operation === 'move' ? 'move' : 'copy';
       setStatusMessage(failed > 0
-        ? `${operation === 'move' ? 'Moved' : 'Copied'} ${done.size} photos. ${failed} were not.`
-        : `Successfully ${operation === 'move' ? 'moved' : 'copied'} ${done.size} photos to Pictures/${savedFolderName}. ✅`);
+        ? t(`${key}.partial`, { done: done.size, failed })
+        : t(`${key}.done`, { done: done.size, folder: `Pictures/${savedFolderName}` }));
       return;
     }
 
@@ -352,9 +384,9 @@ export const useFileSystem = (
       });
 
       if (failedOperations.length > 0) {
-        setStatusMessage(`${operation === 'move' ? 'Moved' : 'Copied'} ${processedPhotoIds.length} photos. ${failedOperations.length} failed.`);
+        setStatusMessage(t(`${operation === 'move' ? 'move' : 'copy'}.partial`, { done: processedPhotoIds.length, failed: failedOperations.length }));
       } else {
-        setStatusMessage(`Successfully ${operation === 'move' ? 'moved' : 'copied'} ${processedPhotoIds.length} photos to "${savedFolderName}". ✅`);
+        setStatusMessage(t(`${operation === 'move' ? 'move' : 'copy'}.done`, { done: processedPhotoIds.length, folder: savedFolderName }));
       }
 
     } catch(err) {
@@ -372,9 +404,9 @@ export const useFileSystem = (
 
     if (total > 0 && processed === total && isLoading) {
       setIsLoading(false);
-      setStatusMessage(`Analysis complete! ${total} photos ready. ✅`);
+      setStatusMessage(t('analysis.done', { count: total }));
     } else if (isLoading && total > 0) {
-      setStatusMessage(`Analyzing... (${processed}/${total})`);
+      setStatusMessage(t('analysis.progress', { done: processed, count: total }));
     }
 
   }, [photos, isLoading, setStatusMessage]);

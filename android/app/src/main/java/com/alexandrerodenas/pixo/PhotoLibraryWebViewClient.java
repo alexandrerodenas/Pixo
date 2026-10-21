@@ -23,6 +23,7 @@ import java.util.Map;
 public class PhotoLibraryWebViewClient extends BridgeWebViewClient {
 
     static final String PATH = "/_pixo_media";
+    static final String SHARED_PATH = "/_pixo_shared";
     private static final int THUMB_SIZE = 384;
 
     private final Bridge bridge;
@@ -35,12 +36,25 @@ public class PhotoLibraryWebViewClient extends BridgeWebViewClient {
     @Override
     public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
         Uri url = request.getUrl();
-        if (!PATH.equals(url.getPath()) || !isAppOrigin(url)) {
+        boolean shared = SHARED_PATH.equals(url.getPath());
+        if (!(shared || PATH.equals(url.getPath())) || !isAppOrigin(url)) {
             return super.shouldInterceptRequest(view, request);
         }
 
         Map<String, String> headers = new HashMap<>();
         headers.put("Cache-Control", "no-store");
+        if (shared) {
+            // Photos received through "Share to Pixo": only the ones the intent gave us
+            try {
+                Uri uri = PhotoLibraryPlugin.sharedUri(Integer.parseInt(url.getQueryParameter("i")));
+                if (uri == null) return new WebResourceResponse("text/plain", "utf-8", 404, "Not Found", headers, null);
+                String mimeType = bridge.getContext().getContentResolver().getType(uri);
+                InputStream stream = bridge.getContext().getContentResolver().openInputStream(uri);
+                return new WebResourceResponse(mimeType != null ? mimeType : "image/jpeg", null, 200, "OK", headers, stream);
+            } catch (Exception e) {
+                return new WebResourceResponse("text/plain", "utf-8", 404, "Not Found", headers, null);
+            }
+        }
         if (!PhotoLibraryPlugin.hasReadAccess(bridge.getContext())) {
             return new WebResourceResponse("text/plain", "utf-8", 403, "Forbidden", headers, null);
         }
