@@ -11,6 +11,7 @@ interface PhotoGridProps {
   thumbnailSize: ThumbnailSize;
   onFilterChange: (label: string) => void;
   onToggleSavePhoto: (id: string) => void;
+  onRequestDelete?: (photos: Photo[], skipConfirm?: boolean) => void;
 }
 
 // Column count per breakpoint for each thumbnail size
@@ -35,7 +36,7 @@ function estimateColumns(containerWidth: number, size: ThumbnailSize): number {
 
 const OVERSCAN = 2; // rows to render above/below viewport
 
-const PhotoGrid: React.FC<PhotoGridProps> = ({ photos, onSelectPhoto, onViewPhoto, thumbnailSize, onFilterChange, onToggleSavePhoto }) => {
+const PhotoGrid: React.FC<PhotoGridProps> = ({ photos, onSelectPhoto, onViewPhoto, thumbnailSize, onFilterChange, onToggleSavePhoto, onRequestDelete }) => {
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Measure container width to estimate columns
@@ -98,7 +99,7 @@ const PhotoGrid: React.FC<PhotoGridProps> = ({ photos, onSelectPhoto, onViewPhot
                         className="flex-1 min-w-0"
                         style={{ maxWidth: `calc((100% - ${gapPx * (columns - 1)}px) / ${columns})` }}
                     >
-                      <PhotoCard photo={photo} onSelect={onSelectPhoto} onView={onViewPhoto} onFilterChange={onFilterChange} onToggleSave={onToggleSavePhoto} />
+                      <PhotoCard photo={photo} onSelect={onSelectPhoto} onView={onViewPhoto} onFilterChange={onFilterChange} onToggleSave={onToggleSavePhoto} onDelete={onRequestDelete ? (p) => onRequestDelete([p]) : undefined} />
                     </div>
                 ))}
                 {/* Fill remaining slots to keep column alignment */}

@@ -128,7 +128,7 @@ const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
                   type="button"
                   onClick={handleClear}
                   className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-full transition-colors"
-                  aria-label="Clear filter"
+                  aria-label="Effacer le filtre"
               >
                 <X className="w-4 h-4" />
               </button>

@@ -1,7 +1,8 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { UserProfile } from '../services/types.ts';
 import { Zap, Bot, ShieldCheck, SlidersHorizontal } from 'lucide-react';
+import { guessOwnerFirstName } from '../services/phoneLibrary.ts';
 
 interface OnboardingProps {
   onProfileSave: (profile: UserProfile) => void;
@@ -19,6 +20,11 @@ const FeatureCard = ({ icon, title, children }: { icon: React.ReactNode, title: 
 
 const Onboarding: React.FC<OnboardingProps> = ({ onProfileSave }) => {
   const [firstName, setFirstName] = useState('');
+
+  // Android app: suggest the name found in the phone's name ("Alex's Pixel")
+  useEffect(() => {
+    guessOwnerFirstName().then(name => { if (name) setFirstName(current => current || name); });
+  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,7 +61,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onProfileSave }) => {
           {/* Hero Section */}
           <div className="max-w-4xl mx-auto mb-16">
             <div className="flex justify-center items-center mb-6">
-              <img src="/logo.png" alt="Pixo Logo" className="w-24 h-24" />
+              <img src="/logo.png" alt="Logo Pixo" className="w-24 h-24" />
             </div>
             <h1 className="text-4xl md:text-6xl font-bold text-primary dark:text-primary-light mb-4 leading-tight">
               Welcome to Pixo

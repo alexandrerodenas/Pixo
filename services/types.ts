@@ -21,6 +21,7 @@ export interface Photo {
   detections: Prediction[];
   selected: boolean;
   isSaved?: boolean;
+  source?: { size: number; lastModified: number }; // the file as scanned, to match saved progress
   customLabel?: string;
 
   // Duplicate Detection
@@ -82,6 +83,8 @@ export interface UserProfile {
   savedFolderName?: string;
   savedOperation?: 'copy' | 'move';
   customLabels?: CustomLabel[];
+
+  classifier?: 'mobilenet' | 'clip'; // Classification model (CLIP is an experimental prototype)
 
   // Blur Settings
   blurThreshold?: number; // Raw variance below this is 'blurry'

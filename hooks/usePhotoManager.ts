@@ -5,6 +5,9 @@ import { PhotoStatus } from '../services/types.ts';
 import { useFileSystem } from './useFileSystem.ts';
 import { usePhotoAnalysis } from './usePhotoAnalysis.ts';
 import { usePhotoSelection } from './usePhotoSelection.ts';
+import { useProgressPersistence } from './useProgressPersistence.ts';
+import { useKeepScreenOn } from './useKeepScreenOn.ts';
+import { useBackgroundProgress } from './useBackgroundProgress.ts';
 import { findDuplicateGroups } from '../services/duplicateDetection.ts';
 import { revokePhotoURLs } from '../services/photoUrls.ts';
 
@@ -30,6 +33,8 @@ export const usePhotoManager = ({ userProfile, onProfileUpdate, filterLabel }: U
       }
     };
   }, []);
+
+  useProgressPersistence(photos);
 
   const directoryHandleRef = useRef<FileSystemDirectoryHandle | null>(null);
   const userProfileRef = useRef(userProfile);
@@ -66,6 +71,9 @@ export const usePhotoManager = ({ userProfile, onProfileUpdate, filterLabel }: U
     return count;
   }, [photos]);
 
+  useKeepScreenOn(processingQueueCount > 0);
+  useBackgroundProgress(processingQueueCount);
+
   // --- Sub-hook for File System Logic ---
   const {
     isLoading,
@@ -94,6 +102,7 @@ export const usePhotoManager = ({ userProfile, onProfileUpdate, filterLabel }: U
   const {
     tfBackend,
     modelsLoadState,
+    reanalyzeAll,
   } = usePhotoAnalysis(photos, setPhotos, userProfileRef, applyRules);
 
   // --- Derived State ---
@@ -196,7 +205,7 @@ export const usePhotoManager = ({ userProfile, onProfileUpdate, filterLabel }: U
       setConfirmDeleteState({ isOpen: true, photosToDelete: photos });
     } else {
       // No saved photos in selection, ask for simple confirmation
-      if (skipConfirm || window.confirm(`Are you sure you want to permanently delete ${photos.length} photo(s)? This action cannot be undone.`)) {
+      if (skipConfirm || window.confirm(`Supprimer définitivement ${photos.length} photo(s) ? Cette action est irréversible.`)) {
         handleDeletePhotos(photos);
       }
     }
@@ -245,6 +254,17 @@ export const usePhotoManager = ({ userProfile, onProfileUpdate, filterLabel }: U
     }
     clearSelectionFiltered(photosToClear);
   }, [selectedPhotos, filterLabel, clearSelectionFiltered]);
+
+  const handleReanalyze = useCallback(() => {
+    const total = Array.from(photos.values()).filter(p => p.status === PhotoStatus.ANALYZED || p.status === PhotoStatus.UNCATEGORIZED || p.status === PhotoStatus.ERROR).length;
+    if (total === 0) {
+      setStatusMessage("Aucune photo analysée à relancer.");
+      return;
+    }
+    if (!window.confirm(`Relancer l'analyse de ${total} photo(s) avec les réglages actuels du profil ? Tes sélections et tes favoris sont conservés.`)) return;
+    const count = reanalyzeAll();
+    setStatusMessage(`Nouvelle analyse de ${count} photo(s) en cours.`);
+  }, [photos, reanalyzeAll, setStatusMessage]);
 
   const handleApplyRulesManually = useCallback(() => {
     const photosToProcess = Array.from(photos.values()).filter(p => p.status === PhotoStatus.ANALYZED);
@@ -474,6 +494,7 @@ export const usePhotoManager = ({ userProfile, onProfileUpdate, filterLabel }: U
     savedPhotos,
     handleRequestDelete,
     handleApplyRulesManually,
+    handleReanalyze,
     handleSelectAll,
     handleClearSelection,
     tfBackend,

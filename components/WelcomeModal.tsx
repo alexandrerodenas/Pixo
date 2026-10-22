@@ -32,8 +32,8 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({ isOpen, onClose }) => {
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
           <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
             <div className="flex items-center gap-3">
-              <img src="/logo.png" alt="Pixo Logo" className="w-10 h-10" />
-              <h2 className="text-2xl font-bold">Welcome to Pixo!</h2>
+              <img src="/logo.png" alt="Logo Pixo" className="w-10 h-10" />
+              <h2 className="text-2xl font-bold">Bienvenue sur Pixo !</h2>
             </div>
             <button onClick={handleClose} className="p-1.5 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600">
               <X className="w-5 h-5"/>
@@ -41,37 +41,37 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({ isOpen, onClose }) => {
           </div>
           <div className="p-6 overflow-y-auto space-y-6">
             <p className="text-center text-lg text-gray-700 dark:text-gray-300">
-              Here's a quick guide to help you get started with organizing your photos effortlessly.
+              Un petit guide pour trier tes photos sans effort.
             </p>
             <div className="space-y-5">
               <FeatureItem
                   icon={<ShieldCheck className="w-5 h-5" />}
-                  title="100% Private & Local"
-                  description="Pixo runs entirely in your browser. Your photos are never uploaded, ensuring complete privacy."
+                  title="100 % privé et local"
+                  description="Pixo fonctionne entièrement dans ton navigateur. Tes photos ne sont jamais envoyées, pour une confidentialité totale."
               />
               <FeatureItem
                   icon={<Bot className="w-5 h-5" />}
-                  title="Dual AI-Powered Analysis"
-                  description="Leverage two AI models to understand scene context (e.g., 'beach') and detect specific objects (e.g., 'dog', 'car')."
+                  title="Analyse IA à double détection"
+                  description="Deux modèles IA comprennent la scène (ex. « plage ») et repèrent des objets (ex. « chien », « voiture »)."
               />
               <FeatureItem
                   icon={<FolderTree className="w-5 h-5" />}
-                  title="Organize Your Way"
-                  description="Use the simple Grid View or the smart Folder View, which automatically groups photos by their AI-detected category."
+                  title="Organise à ta façon"
+                  description="Utilise la vue grille ou la vue par dossiers, qui regroupe automatiquement les photos par catégorie détectée."
               />
               <FeatureItem
                   icon={<Wand2 className="w-5 h-5" />}
-                  title="Create Powerful Rules"
-                  description="Automate your workflow by creating custom rules to select photos based on labels and confidence scores."
+                  title="Crée des règles puissantes"
+                  description="Automatise ton travail avec des règles qui sélectionnent les photos selon leurs libellés et leurs scores."
               />
               <FeatureItem
                   icon={<Heart className="w-5 h-5" />}
-                  title="Save & Move Favorites"
-                  description="Mark photos with a heart to save them. Then, move all your saved photos to a new folder on your computer with a single click."
+                  title="Garde et déplace tes favoris"
+                  description="Marque les photos d'un cœur pour les garder, puis déplace-les toutes dans un nouveau dossier en un clic."
               />
               <FeatureItem
                   icon={<CheckSquare className="w-5 h-5" />}
-                  title="Select & Act"
+                  title="Sélectionne et agis"
                   description="Single-click to select photos, then apply rules, isolate your selection, or delete them permanently from your disk."
               />
             </div>
@@ -84,13 +84,13 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({ isOpen, onClose }) => {
                   onChange={(e) => setDontShowAgain(e.target.checked)}
                   className="w-4 h-4 rounded text-primary focus:ring-primary"
               />
-              Don't show this again
+              Ne plus afficher
             </label>
             <button
                 onClick={handleClose}
                 className="w-full sm:w-auto px-6 py-2 bg-primary text-white font-semibold rounded-md hover:bg-primary-dark transition"
             >
-              Get Started
+              C'est parti
             </button>
           </div>
         </div>

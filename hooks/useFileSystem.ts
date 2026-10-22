@@ -1,10 +1,25 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import type { Photo } from '../services/types.ts';
 import { PhotoStatus } from '../services/types.ts';
 import { revokePhotoURLs } from '../services/photoUrls.ts';
+import { restoreProgress, pruneProgress } from '../services/progressStore.ts';
+import * as phone from '../services/phoneLibrary.ts';
+import { t } from '../services/i18n.ts';
+import type { PhoneScanEntry } from '../services/phoneLibrary.ts';
 
 // Parallel file-system operations (deletions)
 const MAX_CONCURRENT_FS_OPS = 8;
+// Set once the phone was scanned, so the app scans again by itself when it is reopened
+const PHONE_SCANNED_KEY = 'pixoPhoneScanned';
+// Makes each phone scan's photo URLs unique, so a rescan re-queues photos that need analysis
+let scanGeneration = 0;
+
+interface ScannedPhoto {
+  id: string;
+  objectURL: string;
+  thumbnailURL?: string;
+  source: { size: number; lastModified: number };
+}
 
 // Helper to recursively delete a file by its relative path from a directory handle
 async function deleteFileByPath(dirHandle: FileSystemDirectoryHandle, path: string): Promise<boolean> {
@@ -77,6 +92,7 @@ export const useFileSystem = (
 
   // Check for API support on mount
   useEffect(() => {
+    if (phone.isPhoneLibrary()) return;
     if (!window.showDirectoryPicker) {
       setIsApiSupported(false);
       setStatusMessage('Browser not supported. Use Chrome or Edge for directory access.');
@@ -84,88 +100,159 @@ export const useFileSystem = (
     }
   }, [setStatusMessage]);
 
+  // Lists the photos of a folder the user picks (browser).
+  const scanFolder = useCallback(async (): Promise<ScannedPhoto[]> => {
+    const handle = await window.showDirectoryPicker();
+    directoryHandleRef.current = handle;
+    setIsLoading(true);
+    setStatusMessage(t('scan.folder'));
+
+    const filesToProcess: { path: string, handle: FileSystemFileHandle }[] = [];
+    async function getFilesRecursively(dirHandle: FileSystemDirectoryHandle, path: string) {
+      for await (const entry of (dirHandle as any).values()) {
+        const newPath = path ? `${path}/${entry.name}` : entry.name;
+        if (entry.kind === 'file' && entry.name.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
+          filesToProcess.push({ path: newPath, handle: entry as FileSystemFileHandle });
+        } else if (entry.kind === 'directory') {
+          await getFilesRecursively(entry as FileSystemDirectoryHandle, newPath);
+        }
+      }
+    }
+    await getFilesRecursively(handle, '');
+
+    return Promise.all(filesToProcess.map(async ({ path, handle }) => {
+      const file = await handle.getFile();
+      return { id: path, objectURL: URL.createObjectURL(file), source: { size: file.size, lastModified: file.lastModified } };
+    }));
+  }, [directoryHandleRef, setStatusMessage]);
+
+  const toScanned = (e: PhoneScanEntry): ScannedPhoto => ({
+    id: e.id,
+    objectURL: e.url,
+    thumbnailURL: e.thumbnailURL,
+    source: { size: e.size, lastModified: e.lastModified },
+  });
+
+  // Adds photos to the library as queued for analysis, keeping the ones already shown.
+  const addQueued = useCallback((scanned: ScannedPhoto[]) => {
+    setPhotos(prev => {
+      const next = new Map(prev);
+      for (const sp of scanned) {
+        if (next.has(sp.id)) continue;
+        next.set(sp.id, { ...sp, status: PhotoStatus.QUEUED, classifications: [], detections: [], selected: false });
+      }
+      return next;
+    });
+  }, [setPhotos]);
+
+  // Lists every photo on the phone (Android app), asking for access the first time.
+  const scanPhone = useCallback(async (): Promise<ScannedPhoto[]> => {
+    if (!(await phone.hasPhotoAccess()) && !(await phone.requestPhotoAccess())) {
+      throw new DOMException('Photo access denied', 'NotAllowedError');
+    }
+    setIsLoading(true);
+    setStatusMessage(t('scan.phone'));
+    const entries = await phone.scanPhone(++scanGeneration);
+    try { localStorage.setItem(PHONE_SCANNED_KEY, '1'); } catch { /* not critical */ }
+    return entries.map(e => ({ id: e.id, objectURL: e.url, thumbnailURL: e.thumbnailURL, source: { size: e.size, lastModified: e.lastModified } }));
+  }, [setStatusMessage]);
+
   const handleLoadPhotos = useCallback(async () => {
     if (!isApiSupported) return;
 
     try {
-      const handle = await window.showDirectoryPicker();
-      directoryHandleRef.current = handle;
-
-      setIsLoading(true);
-      setStatusMessage('Scanning directory...');
+      const isPhone = phone.isPhoneLibrary();
+      const scanned = isPhone ? await scanPhone() : await scanFolder();
+      // Photos shared to Pixo are not in the phone's library, so the scan does not return them
+      if (isPhone) scanned.push(...(await phone.getSharedPhotos()).map(toScanned));
       setPhotos(new Map());
 
-      const filesToProcess: { path: string, handle: FileSystemFileHandle }[] = [];
-      async function getFilesRecursively(dirHandle: FileSystemDirectoryHandle, path: string) {
-        for await (const entry of (dirHandle as any).values()) {
-          const newPath = path ? `${path}/${entry.name}` : entry.name;
-          if (entry.kind === 'file' && entry.name.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
-            filesToProcess.push({ path: newPath, handle: entry as FileSystemFileHandle });
-          } else if (entry.kind === 'directory') {
-            await getFilesRecursively(entry as FileSystemDirectoryHandle, newPath);
-          }
-        }
-      }
-      await getFilesRecursively(handle, '');
-
-      if (filesToProcess.length === 0) {
-        setStatusMessage('No photos found in this directory. Try another one!');
+      if (scanned.length === 0) {
+        setStatusMessage(isPhone ? t('scan.none.phone') : t('scan.none.folder'));
         setIsLoading(false);
         return;
       }
 
-      setStatusMessage(`Found ${filesToProcess.length} photos. Queuing for analysis...`);
+      setStatusMessage(t('scan.found', { count: scanned.length }));
 
       // Revoke old blob URLs to prevent memory leak
       for (const photo of photos.values()) {
         revokePhotoURLs(photo);
       }
 
-      const tempPhotosMap = new Map<string, Photo>();
-      // Use Promise.all to speed up file reading for previews
-      await Promise.all(filesToProcess.map(async ({ path, handle }) => {
-        const file = await handle.getFile();
-        const objectURL = URL.createObjectURL(file);
-        tempPhotosMap.set(path, {
-          id: path,
-          objectURL,
-          status: PhotoStatus.QUEUED,
-          classifications: [],
-          detections: [],
-          selected: false,
-        });
-      }));
+      const restored = await restoreProgress(scanned.map(({ id, objectURL, thumbnailURL, source }) => ({
+        id,
+        objectURL,
+        thumbnailURL,
+        source,
+        status: PhotoStatus.QUEUED,
+        classifications: [],
+        detections: [],
+        selected: false,
+      })));
+      // A phone scan sees every photo: forget the ones that are gone.
+      if (isPhone) pruneProgress(new Set(scanned.map(p => p.id))).catch(console.warn);
 
-      setPhotos(tempPhotosMap); // Add all photos at once for initial render
+      setPhotos(new Map(restored.map(p => [p.id, p]))); // Add all photos at once for initial render
       // The usePhotoAnalysis hook will pick up the 'QUEUED' photos.
 
     } catch (error) {
-      if ((error as DOMException).name === 'AbortError') {
-        setStatusMessage('Directory selection cancelled.');
+      const name = (error as DOMException).name;
+      if (name === 'AbortError') {
+        setStatusMessage(t('scan.cancelled'));
+      } else if (name === 'NotAllowedError') {
+        setStatusMessage(t('scan.denied'));
       } else {
-        console.error('Error loading directory:', error);
-        setStatusMessage('Could not load directory. Check console for details.');
+        console.error('Error loading photos:', error);
+        setStatusMessage(t('scan.failed'));
       }
       setIsLoading(false);
     }
-  }, [isApiSupported, directoryHandleRef, setPhotos, setStatusMessage]);
+  }, [isApiSupported, photos, scanFolder, scanPhone, setPhotos, setStatusMessage]);
+
+  // Android app: photos shared to Pixo, both when the app is started by a share and while it is open.
+  useEffect(() => {
+    if (!phone.isPhoneLibrary()) return;
+    phone.getSharedPhotos(fresh => addQueued(fresh.map(toScanned)))
+      .then(entries => { if (entries.length > 0) addQueued(entries.map(toScanned)); })
+      .catch(console.warn);
+  }, [addQueued]);
+
+  // Android app: when it is reopened (or restarted by the system), scan the phone again right away.
+  const autoScanDoneRef = useRef(false);
+  useEffect(() => {
+    if (autoScanDoneRef.current || !phone.isPhoneLibrary()) return;
+    autoScanDoneRef.current = true;
+    let scannedBefore = false;
+    try { scannedBefore = localStorage.getItem(PHONE_SCANNED_KEY) === '1'; } catch { /* not critical */ }
+    if (!scannedBefore) return;
+    phone.hasPhotoAccess().then(granted => { if (granted) handleLoadPhotos(); }).catch(console.warn);
+  }, [handleLoadPhotos]);
 
   const handleDeletePhotos = useCallback(async (photosToDelete: Photo[]) => {
-    if (photosToDelete.length === 0 || !directoryHandleRef.current) return;
+    if (photosToDelete.length === 0) return;
+    const isPhone = phone.isPhoneLibrary();
+    if (!isPhone && !directoryHandleRef.current) return;
 
-    setStatusMessage(`Deleting ${photosToDelete.length} photo(s)...`);
+    setStatusMessage(t('delete.progress', { count: photosToDelete.length }));
 
     // Delete a few files at a time, then remove from the UI only those really deleted,
     // so a failed deletion stays visible instead of silently disappearing.
-    const deleted: Photo[] = [];
-    const queue = [...photosToDelete];
-    const deleteNext = async (): Promise<void> => {
-      const p = queue.shift();
-      if (!p) return;
-      if (await deleteFileByPath(directoryHandleRef.current!, p.id)) deleted.push(p);
-      return deleteNext();
-    };
-    await Promise.all(Array.from({ length: Math.min(MAX_CONCURRENT_FS_OPS, queue.length) }, deleteNext));
+    let deleted: Photo[] = [];
+    if (isPhone) {
+      // One system confirmation for the whole batch
+      const done = await phone.deletePhotos(photosToDelete.map(p => p.id));
+      deleted = photosToDelete.filter(p => done.has(p.id));
+    } else {
+      const queue = [...photosToDelete];
+      const deleteNext = async (): Promise<void> => {
+        const p = queue.shift();
+        if (!p) return;
+        if (await deleteFileByPath(directoryHandleRef.current!, p.id)) deleted.push(p);
+        return deleteNext();
+      };
+      await Promise.all(Array.from({ length: Math.min(MAX_CONCURRENT_FS_OPS, queue.length) }, deleteNext));
+    }
 
     const deletedIds = new Set(deleted.map(p => p.id));
     setPhotos(prevPhotos => {
@@ -176,14 +263,41 @@ export const useFileSystem = (
     deleted.forEach(revokePhotoURLs);
 
     if (deleted.length < photosToDelete.length) {
-      setStatusMessage(`Deleted ${deleted.length} of ${photosToDelete.length} photos. ${photosToDelete.length - deleted.length} could not be deleted and are still shown.`);
+      setStatusMessage(t('delete.partial', { done: deleted.length, count: photosToDelete.length, failed: photosToDelete.length - deleted.length }));
     } else {
-      setStatusMessage(`Successfully deleted ${deleted.length} photos. ✅`);
+      setStatusMessage(t('delete.done', { done: deleted.length }));
     }
   }, [directoryHandleRef, setPhotos, setStatusMessage]);
 
   const handleMoveSaved = useCallback(async (savedPhotos: Photo[], savedFolderName: string, operation: 'copy' | 'move' = 'move') => {
-    if (savedPhotos.length === 0 || !directoryHandleRef.current) return;
+    if (savedPhotos.length === 0) return;
+
+    if (phone.isPhoneLibrary()) {
+      if (!window.confirm(`This will ${operation} ${savedPhotos.length} photo(s) to Pictures/${savedFolderName}. Continue?`)) return;
+      setStatusMessage(`${operation === 'move' ? 'Moving' : 'Copying'} ${savedPhotos.length} photo(s)...`);
+      const done = await phone.transferPhotos(savedPhotos.map(p => p.id), savedFolderName, operation);
+      if (operation === 'move') {
+        setPhotos(prev => {
+          const newPhotos = new Map(prev);
+          done.forEach(id => {
+            const photo = newPhotos.get(id);
+            if (photo) {
+              revokePhotoURLs(photo);
+              newPhotos.delete(id);
+            }
+          });
+          return newPhotos;
+        });
+      }
+      const failed = savedPhotos.length - done.size;
+      const key = operation === 'move' ? 'move' : 'copy';
+      setStatusMessage(failed > 0
+        ? t(`${key}.partial`, { done: done.size, failed })
+        : t(`${key}.done`, { done: done.size, folder: `Pictures/${savedFolderName}` }));
+      return;
+    }
+
+    if (!directoryHandleRef.current) return;
 
     if (!window.confirm(`This will ${operation} ${savedPhotos.length} photo(s) to a new directory. This action is permanent. Continue?`)) {
       return;
@@ -270,9 +384,9 @@ export const useFileSystem = (
       });
 
       if (failedOperations.length > 0) {
-        setStatusMessage(`${operation === 'move' ? 'Moved' : 'Copied'} ${processedPhotoIds.length} photos. ${failedOperations.length} failed.`);
+        setStatusMessage(t(`${operation === 'move' ? 'move' : 'copy'}.partial`, { done: processedPhotoIds.length, failed: failedOperations.length }));
       } else {
-        setStatusMessage(`Successfully ${operation === 'move' ? 'moved' : 'copied'} ${processedPhotoIds.length} photos to "${savedFolderName}". ✅`);
+        setStatusMessage(t(`${operation === 'move' ? 'move' : 'copy'}.done`, { done: processedPhotoIds.length, folder: savedFolderName }));
       }
 
     } catch(err) {
@@ -290,9 +404,9 @@ export const useFileSystem = (
 
     if (total > 0 && processed === total && isLoading) {
       setIsLoading(false);
-      setStatusMessage(`Analysis complete! ${total} photos ready. ✅`);
+      setStatusMessage(t('analysis.done', { count: total }));
     } else if (isLoading && total > 0) {
-      setStatusMessage(`Analyzing... (${processed}/${total})`);
+      setStatusMessage(t('analysis.progress', { done: processed, count: total }));
     }
 
   }, [photos, isLoading, setStatusMessage]);

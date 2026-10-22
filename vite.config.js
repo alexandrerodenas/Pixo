@@ -6,10 +6,10 @@ import { defineConfig } from 'vite'
 // Model weights are downloaded from TF Hub (redirects to Kaggle) and Google Cloud Storage.
 export const CONTENT_SECURITY_POLICY = [
   "default-src 'self'",
-  "script-src 'self' 'wasm-unsafe-eval'",
+  "script-src 'self' 'wasm-unsafe-eval' https://cdn.jsdelivr.net",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' blob: data:",
-  "connect-src 'self' blob: https://tfhub.dev https://www.kaggle.com https://storage.googleapis.com",
+  "connect-src 'self' blob: https://tfhub.dev https://www.kaggle.com https://storage.googleapis.com https://huggingface.co https://*.huggingface.co https://cdn.jsdelivr.net",
   "worker-src 'self' blob:",
   "object-src 'none'",
   "base-uri 'none'",
@@ -24,9 +24,20 @@ const cspMetaTag = {
   ],
 }
 
+// The ONNX Runtime wasm (26 MB) is fetched from a CDN at runtime (see workers/clip.worker.ts),
+// so it must not end up in the build, and therefore in the APK.
+const dropOrtWasm = {
+  name: 'drop-ort-wasm',
+  generateBundle(_, bundle) {
+    for (const name of Object.keys(bundle)) {
+      if (/ort-wasm.*\.wasm$/.test(name)) delete bundle[name];
+    }
+  },
+};
+
 export default defineConfig({
   base: './',
-  plugins: [cspMetaTag],
+  plugins: [cspMetaTag, dropOrtWasm],
   worker: {
     format: 'es',
   },

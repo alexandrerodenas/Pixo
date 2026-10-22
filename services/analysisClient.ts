@@ -1,6 +1,8 @@
 // Client-side interface for the analysis Web Worker
 // Manages worker lifecycle, message passing, and cleanup
 
+import { confirmModelDownload, markModelsDownloaded } from './downloadGuard.ts';
+
 type ErrorCallback = (error: string, photoId?: string) => void;
 
 let worker: Worker | null = null;
@@ -10,6 +12,9 @@ let workerBackend: string | null = null;
 let pendingResolve: Map<string, { resolve: (value: any) => void; reject: (reason?: any) => void }> = new Map();
 let initPromise: Promise<void> | null = null;
 let errorSubscriber: ErrorCallback | null = null;
+let downloadConfirmed = false;
+// Approximate size of MobileNet + COCO-SSD, shown in the mobile-data warning
+const MODELS_SIZE_MB = 25;
 
 function createWorker(): Worker | null {
   if (!isWorkerSupported) return null;
@@ -28,6 +33,7 @@ function handleWorkerMessage(event: MessageEvent) {
   switch (msg.type) {
     case 'initialized':
       isInitialized = true;
+      markModelsDownloaded('tf');
       workerBackend = msg.backend ?? null;
       break;
 
@@ -67,6 +73,16 @@ export async function ensureWorkerInitialized(): Promise<void> {
   if (isInitialized) return;
   if (initPromise) return initPromise;
 
+  // Nothing is downloaded before the user agreed, when the models are not on the phone yet and it uses mobile data
+  if (!downloadConfirmed) {
+    initPromise = confirmModelDownload('tf', MODELS_SIZE_MB).then(() => {
+      downloadConfirmed = true;
+      initPromise = null;
+      return ensureWorkerInitialized();
+    });
+    return initPromise;
+  }
+
   if (!worker) {
     worker = createWorker();
     if (!worker) {
@@ -90,6 +106,7 @@ export async function ensureWorkerInitialized(): Promise<void> {
         worker!.removeEventListener('message', handler as any);
         if (event.data.type === 'initialized') {
           isInitialized = true;
+          markModelsDownloaded('tf');
           resolve();
         } else {
           reject(new Error(event.data.error));
@@ -113,16 +130,20 @@ export interface AnalyzeOptions {
 
 export function analyzePhoto(options: AnalyzeOptions): Promise<any> {
   return new Promise(async (resolve, reject) => {
-    if (!worker || !isWorkerSupported) {
+    if (!isWorkerSupported) {
       reject(new Error('Worker not available'));
       return;
     }
 
-    // Ensure worker is initialized
+    // Ensure worker is initialized (waits for the mobile-data answer when the models must be downloaded)
     try {
       await ensureWorkerInitialized();
     } catch (e) {
       reject(e);
+      return;
+    }
+    if (!worker) {
+      reject(new Error('Worker not available'));
       return;
     }
 

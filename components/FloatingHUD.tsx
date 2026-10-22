@@ -40,7 +40,7 @@ const FloatingHUD: React.FC<FloatingHUDProps> = ({
           >
             <div className="flex items-center gap-2 font-bold text-sm text-gray-800 dark:text-gray-100">
               <Activity className="w-4 h-4 text-primary" />
-              {isExpanded && <span>Stats & Status</span>}
+              {isExpanded && <span>Statistiques et état</span>}
             </div>
             {isExpanded ? <ChevronDown className="w-4 h-4 text-gray-400" /> : <ChevronUp className="w-4 h-4 text-gray-400" />}
           </button>
@@ -67,7 +67,7 @@ const FloatingHUD: React.FC<FloatingHUDProps> = ({
                 {/* Processing Status */}
                 {processingQueueCount > 0 && (
                     <div className="flex items-center justify-between text-xs bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-300 p-2 rounded-md">
-                      <span className="flex items-center gap-2"><Spinner className="w-3 h-3" /> Processing</span>
+                      <span className="flex items-center gap-2"><Spinner className="w-3 h-3" /> En cours</span>
                       <span className="font-bold">{processingQueueCount} remaining</span>
                     </div>
                 )}
@@ -81,7 +81,7 @@ const FloatingHUD: React.FC<FloatingHUDProps> = ({
                 <div className="flex items-center justify-between text-[10px] text-gray-400 uppercase tracking-wider font-mono pt-1">
                   <span>{tfBackend || 'Init...'}</span>
                   <div className="flex items-center gap-1">
-                    <span>AI Models:</span>
+                    <span>Modèles IA :</span>
                     {isModelLoading ? <Loader className="w-3 h-3 animate-spin" /> :
                         areModelsReady ? <CheckCircle2 className="w-3 h-3 text-green-500" /> :
                             <AlertCircle className="w-3 h-3 text-red-500" />}

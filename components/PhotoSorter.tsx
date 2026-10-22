@@ -10,6 +10,7 @@ import PhotoContent from './PhotoContent.tsx';
 import PhotoViewerModal from './PhotoViewerModal.tsx';
 import ProfileSettingsModal from './ProfileSettingsModal.tsx';
 import ConfirmDeleteModal from './ConfirmDeleteModal.tsx';
+import DataWarningModal from './DataWarningModal.tsx';
 
 interface PhotoSorterProps {
   userProfile: UserProfile;
@@ -34,6 +35,7 @@ const PhotoSorter: React.FC<PhotoSorterProps> = ({ userProfile, onProfileUpdate 
     selectedPhotos,
     handleRequestDelete,
     handleApplyRulesManually,
+    handleReanalyze,
     handleSelectAll,
     handleClearSelection,
     isolateSelection,
@@ -89,6 +91,7 @@ const PhotoSorter: React.FC<PhotoSorterProps> = ({ userProfile, onProfileUpdate 
             onSelectAll={handleSelectAll}
             onClearSelection={handleClearSelection}
             onApplyRules={handleApplyRulesManually}
+            onReanalyze={handleReanalyze}
             onDeleteSelected={() => handleRequestDelete()}
             selectedPhotoCount={selectedPhotos.length}
             noAnalyzedPhotos={noAnalyzedPhotos}
@@ -151,6 +154,7 @@ const PhotoSorter: React.FC<PhotoSorterProps> = ({ userProfile, onProfileUpdate 
             onClose={() => setViewingPhoto(null)}
         />
 
+        <DataWarningModal />
         <ConfirmDeleteModal
             isOpen={confirmDeleteState.isOpen}
             onClose={handleCancelDelete}

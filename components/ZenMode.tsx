@@ -9,9 +9,24 @@ import {
   CheckCircle2,
   Keyboard,
   Save,
-  Info
+  Info,
+  Trash2,
+  RotateCw
 } from 'lucide-react';
 import type { Photo } from '../services/types.ts';
+import type { PanInfo } from 'motion/react';
+
+// Swipe thresholds (px, px/s)
+const SWIPE_DISTANCE = 90;
+const SWIPE_VELOCITY = 500;
+
+type SwipeHint = 'next' | 'prev' | 'keep' | 'delete' | null;
+const HINTS: Record<Exclude<SwipeHint, null>, { text: string; className: string }> = {
+  next: { text: 'Suivante →', className: 'bg-white/20' },
+  prev: { text: '← Précédente', className: 'bg-white/20' },
+  keep: { text: '↑ Garder', className: 'bg-pink-500' },
+  delete: { text: '↓ Supprimer', className: 'bg-red-600' },
+};
 
 interface ZenModeProps {
   photos: Photo[];
@@ -65,6 +80,30 @@ const ZenMode: React.FC<ZenModeProps> = ({
   }, [currentPhoto, onToggleSavePhoto]);
 
   const [rotation, setRotation] = useState(0);
+  const [swipeHint, setSwipeHint] = useState<SwipeHint>(null);
+
+  const hintFor = (info: PanInfo): SwipeHint => {
+    const { x, y } = info.offset;
+    if (Math.max(Math.abs(x), Math.abs(y)) < 40) return null;
+    if (Math.abs(x) > Math.abs(y)) return x < 0 ? 'next' : 'prev';
+    return y < 0 ? 'keep' : 'delete';
+  };
+
+  const handleDragEnd = (_: unknown, info: PanInfo) => {
+    setSwipeHint(null);
+    const { x, y } = info.offset;
+    const horizontal = Math.abs(x) > Math.abs(y);
+    const distance = horizontal ? Math.abs(x) : Math.abs(y);
+    const velocity = Math.abs(horizontal ? info.velocity.x : info.velocity.y);
+    if (distance < SWIPE_DISTANCE && !(distance > 40 && velocity > SWIPE_VELOCITY)) return;
+    if (horizontal) {
+      if (x < 0) handleNext(); else handlePrev();
+    } else if (y < 0) {
+      handleToggleSave();
+    } else {
+      handleDelete();
+    }
+  };
 
   const handleRotate = useCallback((direction: 'left' | 'right') => {
     setRotation(prev => (direction === 'left' ? prev - 90 : prev + 90));
@@ -116,13 +155,13 @@ const ZenMode: React.FC<ZenModeProps> = ({
     return (
         <div className="flex flex-col items-center justify-center h-full text-center p-8 bg-gray-900 text-white">
           <CheckCircle2 className="w-20 h-20 text-green-500 mb-4" />
-          <h2 className="text-2xl font-bold">All done!</h2>
-          <p className="text-gray-400 mt-2">No photos left to review in this mode.</p>
+          <h2 className="text-2xl font-bold">Terminé !</h2>
+          <p className="text-gray-400 mt-2">Plus aucune photo à examiner dans ce mode.</p>
           <button
               onClick={onClose}
               className="mt-6 px-6 py-2 bg-primary text-white rounded-full font-semibold hover:bg-primary-dark transition-colors"
           >
-            Back to Grid
+            Retour à la grille
           </button>
         </div>
     );
@@ -141,13 +180,13 @@ const ZenMode: React.FC<ZenModeProps> = ({
   return (
       <div className="fixed inset-0 z-[100] flex flex-col bg-black text-white overflow-hidden font-sans">
         {/* Header */}
-        <div className="h-16 flex items-center justify-between px-6 z-10 bg-gradient-to-b from-black/80 to-transparent">
-          <div className="flex items-center gap-4">
-            <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors" title="Exit Zen Mode">
+        <div className="h-16 shrink-0 flex items-center justify-between px-3 sm:px-6 z-10 pt-[env(safe-area-inset-top)] bg-gradient-to-b from-black/80 to-transparent">
+          <div className="flex items-center gap-2 sm:gap-4">
+            <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors" title="Quitter le mode Zen">
               <X className="w-6 h-6" />
             </button>
             <div className="flex flex-col">
-              <span className="font-bold text-lg tracking-tight">Zen Mode</span>
+              <span className="font-bold text-lg tracking-tight">Mode Zen</span>
               <span className="text-xs text-gray-400 font-mono">{currentIndex + 1} / {photos.length}</span>
             </div>
           </div>
@@ -156,22 +195,22 @@ const ZenMode: React.FC<ZenModeProps> = ({
             <button
                 onClick={() => setShowShortcuts(!showShortcuts)}
                 className={`p-2 rounded-full transition-colors ${showShortcuts ? 'bg-primary text-white' : 'hover:bg-white/10 text-gray-400'}`}
-                title="Toggle Shortcuts"
+                title="Afficher les raccourcis"
             >
               <Keyboard className="w-5 h-5" />
             </button>
             <button
                 onClick={handleFinish}
-                className="flex items-center gap-2 px-4 py-1.5 bg-green-600 hover:bg-green-500 rounded-full font-semibold transition-colors shadow-lg"
+                className="flex items-center gap-2 px-3 sm:px-4 py-1.5 bg-green-600 whitespace-nowrap text-sm sm:text-base hover:bg-green-500 rounded-full font-semibold transition-colors shadow-lg"
             >
               <CheckCircle2 className="w-4 h-4" />
-              Finish & Export
+              <span className="hidden sm:inline">Terminer et exporter</span><span className="sm:hidden">Exporter</span>
             </button>
           </div>
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 flex items-center justify-center relative px-4 sm:px-12">
+        <div className="flex-1 min-h-0 flex items-center justify-center relative px-4 sm:px-12">
           <button
               onClick={handlePrev}
               disabled={currentIndex === 0}
@@ -189,14 +228,19 @@ const ZenMode: React.FC<ZenModeProps> = ({
                   animate={{ opacity: 1, x: 0, scale: 1 }}
                   exit={{ opacity: 0, x: -direction * 50, scale: 0.95 }}
                   transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-                  className="relative max-w-full max-h-full flex flex-col items-center"
+                  drag
+                  dragSnapToOrigin
+                  dragElastic={0.5}
+                  onDrag={(_, info) => setSwipeHint(hintFor(info))}
+                  onDragEnd={handleDragEnd}
+                  className="relative max-w-full max-h-full flex flex-col items-center touch-none"
               >
                 <div className="relative group">
                   <img
                       src={currentPhoto.objectURL}
-                      alt="Zen review"
+                      alt="Revue Zen"
                       style={{ transform: `rotate(${rotation}deg)`, transition: 'transform 0.2s' }}
-                      className="max-w-full max-h-[75vh] object-contain select-none rounded-lg shadow-[0_0_50px_rgba(0,0,0,0.5)] border border-white/5"
+                      className="max-w-full max-h-[calc(100dvh-17rem)] sm:max-h-[75vh] object-contain select-none pointer-events-none rounded-lg shadow-[0_0_50px_rgba(0,0,0,0.5)] border border-white/5"
                   />
 
                   {/* Status Indicators */}
@@ -238,6 +282,43 @@ const ZenMode: React.FC<ZenModeProps> = ({
           </button>
         </div>
 
+        {/* Swipe hint */}
+        <AnimatePresence>
+          {swipeHint && (
+              <motion.div
+                  key={swipeHint}
+                  initial={{ opacity: 0, y: -8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  className={`absolute top-20 left-1/2 -translate-x-1/2 z-20 px-4 py-2 rounded-full font-bold text-sm shadow-lg pointer-events-none ${HINTS[swipeHint].className}`}
+              >
+                {HINTS[swipeHint].text}
+              </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Touch actions (no keyboard on a phone) */}
+        <div className="shrink-0 flex items-center justify-center gap-3 sm:gap-5 pt-2 pb-3 px-4 sm:hidden">
+          <button onClick={handlePrev} disabled={currentIndex === 0} aria-label="Photo précédente" className="p-3 rounded-full bg-white/10 disabled:opacity-30 active:scale-95 transition">
+            <ChevronLeft className="w-6 h-6" />
+          </button>
+          <button onClick={() => handleRotate('right')} aria-label="Pivoter" className="p-3 rounded-full bg-white/10 active:scale-95 transition">
+            <RotateCw className="w-6 h-6" />
+          </button>
+          <button onClick={handleToggleSave} aria-label="Garder" className={`p-4 rounded-full active:scale-95 transition ${currentPhoto.isSaved ? 'bg-pink-500' : 'bg-white/10'}`}>
+            <Heart className={`w-7 h-7 ${currentPhoto.isSaved ? 'fill-current' : ''}`} />
+          </button>
+          <button onClick={handleDelete} aria-label="Supprimer" className="p-3 rounded-full bg-red-600/80 active:scale-95 transition">
+            <Trash2 className="w-6 h-6" />
+          </button>
+          <button onClick={handleNext} disabled={currentIndex === photos.length - 1} aria-label="Photo suivante" className="p-3 rounded-full bg-white/10 disabled:opacity-30 active:scale-95 transition">
+            <ChevronRight className="w-6 h-6" />
+          </button>
+        </div>
+        <p className="sm:hidden text-center text-[10px] text-gray-500 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+          Glisse : ← → photos, ↑ garder, ↓ supprimer
+        </p>
+
         {/* Progress Bar */}
         <div className="h-1.5 w-full bg-white/5">
           <motion.div
@@ -262,7 +343,7 @@ const ZenMode: React.FC<ZenModeProps> = ({
                     <kbd className="bg-white/20 px-2 py-1 rounded font-mono shadow-inner">←</kbd>
                     <kbd className="bg-white/20 px-2 py-1 rounded font-mono shadow-inner">→</kbd>
                   </div>
-                  <span className="text-gray-400 font-medium uppercase tracking-wider">Navigate</span>
+                  <span className="text-gray-400 font-medium uppercase tracking-wider">Naviguer</span>
                 </div>
                 <div className="flex items-center gap-4 text-xs bg-white/5 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10">
                   <div className="flex gap-1">
@@ -270,15 +351,15 @@ const ZenMode: React.FC<ZenModeProps> = ({
                     <kbd className="bg-white/20 px-2 py-1 rounded font-mono shadow-inner">←</kbd>
                     <kbd className="bg-white/20 px-2 py-1 rounded font-mono shadow-inner">→</kbd>
                   </div>
-                  <span className="text-gray-400 font-medium uppercase tracking-wider">Rotate</span>
+                  <span className="text-gray-400 font-medium uppercase tracking-wider">Rotation</span>
                 </div>
                 <div className="flex items-center gap-4 text-xs bg-white/5 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10">
                   <kbd className="bg-white/20 px-2 py-1 rounded font-mono shadow-inner w-8 text-center">P</kbd>
-                  <span className="text-gray-400 font-medium uppercase tracking-wider">Favorite</span>
+                  <span className="text-gray-400 font-medium uppercase tracking-wider">Favori</span>
                 </div>
                 <div className="flex items-center gap-4 text-xs bg-white/5 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10">
                   <kbd className="bg-white/20 px-2 py-1 rounded font-mono shadow-inner">DEL</kbd>
-                  <span className="text-gray-400 font-medium uppercase tracking-wider">Delete</span>
+                  <span className="text-gray-400 font-medium uppercase tracking-wider">Supprimer</span>
                 </div>
               </motion.div>
           )}
@@ -302,25 +383,25 @@ const ZenMode: React.FC<ZenModeProps> = ({
                     <div className="w-20 h-20 bg-green-500/10 text-green-500 flex items-center justify-center rounded-3xl mb-6 rotate-3">
                       <Save className="w-10 h-10" />
                     </div>
-                    <h3 className="text-3xl font-bold mb-3 tracking-tight">Ready to export?</h3>
+                    <h3 className="text-3xl font-bold mb-3 tracking-tight">Prêt à exporter ?</h3>
                     <p className="text-gray-400 mb-8 leading-relaxed">
-                      You've selected <span className="text-white font-bold">{photos.filter(p => p.isSaved).length}</span> photos to keep. They will be moved to your chosen folder.
+                      Tu as choisi <span className="text-white font-bold">{photos.filter(p => p.isSaved).length}</span> photo(s) à garder. Elles seront déplacées dans le dossier choisi.
                     </p>
 
                     <div className="w-full text-left mb-8">
-                      <label className="block text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500 mb-3 ml-1">Destination Folder</label>
+                      <label className="block text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500 mb-3 ml-1">Dossier de destination</label>
                       <div className="relative">
                         <input
                             type="text"
                             value={customFolderName}
                             onChange={(e) => setCustomFolderName(e.target.value)}
                             className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 focus:ring-2 focus:ring-primary outline-none transition-all text-lg font-medium"
-                            placeholder="Enter folder name..."
+                            placeholder="Nom du dossier..."
                         />
                       </div>
                       <p className="mt-3 flex items-center gap-2 text-[10px] text-gray-500 italic ml-1">
                         <Info className="w-3 h-3" />
-                        This folder will be created inside your destination.
+                        Ce dossier sera créé à l'emplacement de destination.
                       </p>
                     </div>
 
@@ -329,13 +410,13 @@ const ZenMode: React.FC<ZenModeProps> = ({
                           onClick={() => setIsExporting(false)}
                           className="flex-1 px-6 py-4 rounded-2xl hover:bg-white/10 transition-colors font-bold uppercase tracking-widest text-xs"
                       >
-                        Keep Sorting
+                        Continuer le tri
                       </button>
                       <button
                           onClick={handleConfirmExport}
                           className="flex-1 px-6 py-4 bg-primary hover:bg-primary-dark rounded-2xl transition-all font-bold uppercase tracking-widest text-xs shadow-lg shadow-primary/20 hover:shadow-primary/40 active:scale-95"
                       >
-                        Export Now
+                        Exporter
                       </button>
                     </div>
                   </div>
