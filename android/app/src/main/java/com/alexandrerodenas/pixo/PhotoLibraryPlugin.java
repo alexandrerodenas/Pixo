@@ -53,6 +53,8 @@ public class PhotoLibraryPlugin extends Plugin {
 
     // Photos received through "Share to Pixo", kept until the app restarts. Index = position here.
     private static final List<Uri> sharedUris = new java.util.concurrent.CopyOnWriteArrayList<>();
+    // Index of the photo Pixo was asked to open (Open with), until the web app has taken it
+    private static int pendingViewIndex = -1;
     private static PhotoLibraryPlugin instance;
 
     static Uri sharedUri(int index) {
@@ -63,7 +65,12 @@ public class PhotoLibraryPlugin extends Plugin {
     static void receiveShare(Intent intent) {
         if (intent == null || intent.getAction() == null) return;
         List<Uri> uris = new ArrayList<>();
-        if (Intent.ACTION_SEND.equals(intent.getAction())) {
+        boolean view = Intent.ACTION_VIEW.equals(intent.getAction());
+        if (view) {
+            // Open with Pixo, from the gallery or a file manager: one photo, shown right away
+            Uri uri = intent.getData();
+            if (uri != null) uris.add(uri);
+        } else if (Intent.ACTION_SEND.equals(intent.getAction())) {
             Uri uri = intent.getParcelableExtra(Intent.EXTRA_STREAM);
             if (uri != null) uris.add(uri);
         } else if (Intent.ACTION_SEND_MULTIPLE.equals(intent.getAction())) {
@@ -75,6 +82,7 @@ public class PhotoLibraryPlugin extends Plugin {
         intent.setAction(null);
         int first = sharedUris.size();
         sharedUris.addAll(uris);
+        if (view) pendingViewIndex = first;
         if (instance != null) instance.notifyShared(first);
     }
 
@@ -83,12 +91,20 @@ public class PhotoLibraryPlugin extends Plugin {
         for (int i = first; i < sharedUris.size(); i++) photos.put(describeShared(i));
         JSObject data = new JSObject();
         data.put("photos", photos);
+        data.put("view", takePendingView());
         notifyListeners("shared", data);
+    }
+
+    /** The index of the photo to open, or -1; given out once. */
+    private static int takePendingView() {
+        int index = pendingViewIndex;
+        pendingViewIndex = -1;
+        return index;
     }
 
     private JSObject describeShared(int index) {
         Uri uri = sharedUris.get(index);
-        String name = "shared-" + index + ".jpg";
+        String name = uri.getLastPathSegment() != null ? uri.getLastPathSegment() : "shared-" + index + ".jpg";
         long size = 0;
         try (Cursor c = getContext().getContentResolver().query(uri, new String[] { OpenableColumns.DISPLAY_NAME, OpenableColumns.SIZE }, null, null, null)) {
             if (c != null && c.moveToFirst()) {
@@ -139,6 +155,7 @@ public class PhotoLibraryPlugin extends Plugin {
         for (int i = 0; i < sharedUris.size(); i++) photos.put(describeShared(i));
         JSObject ret = new JSObject();
         ret.put("photos", photos);
+        ret.put("view", takePendingView());
         call.resolve(ret);
     }
 

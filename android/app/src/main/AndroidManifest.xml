@@ -23,6 +23,14 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
+            <!-- "Open with Pixo": offered for any image, so it can be picked as the default photo app -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="content" android:mimeType="image/*" />
+                <data android:scheme="file" android:mimeType="image/*" />
+            </intent-filter>
+
             <!-- "Share to Pixo" from the gallery or any app sharing photos -->
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />
