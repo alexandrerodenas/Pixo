@@ -25,8 +25,8 @@ interface PhotoLibraryPlugin {
   requestNotifications(): Promise<void>;
   networkType(): Promise<{ type: 'wifi' | 'cellular' | 'other' | 'none'; metered: boolean }>;
   closeApp(): Promise<void>;
-  getSharedPhotos(): Promise<{ photos: SharedPhoto[] }>;
-  addListener(event: 'shared', listener: (data: { photos: SharedPhoto[] }) => void): Promise<PluginListenerHandle>;
+  getSharedPhotos(): Promise<{ photos: SharedPhoto[]; view?: number }>;
+  addListener(event: 'shared', listener: (data: { photos: SharedPhoto[]; view?: number }) => void): Promise<PluginListenerHandle>;
 }
 
 interface SharedPhoto {
@@ -65,18 +65,40 @@ const toSharedEntry = (p: SharedPhoto): PhoneScanEntry => ({
   lastModified: p.lastModified,
 });
 
+// Photo Pixo was asked to open (Open with), waiting for the screen to show it
+let viewRequestId: string | null = null;
+let viewRequestListener: ((id: string) => void) | null = null;
+
+const requestView = (photos: SharedPhoto[], view: number | undefined) => {
+  const photo = photos.find(p => p.index === view);
+  if (!photo) return;
+  viewRequestId = toSharedEntry(photo).id;
+  viewRequestListener?.(viewRequestId);
+};
+
+/** Calls listener with the id of a photo to open in the viewer (Open with Pixo), also if it came before. */
+export function onViewRequest(listener: (id: string) => void): () => void {
+  viewRequestListener = listener;
+  if (viewRequestId) listener(viewRequestId);
+  return () => { if (viewRequestListener === listener) viewRequestListener = null; };
+}
+
+export const clearViewRequest = () => { viewRequestId = null; };
+
 /** Photos shared to Pixo so far. Calls onNew with the ones received while the app is open. */
 export async function getSharedPhotos(onNew?: (entries: PhoneScanEntry[]) => void): Promise<PhoneScanEntry[]> {
   if (!isPhoneLibrary()) return [];
   if (!sharedEntries.length) {
-    const { photos } = await PhotoLibrary.getSharedPhotos();
+    const { photos, view } = await PhotoLibrary.getSharedPhotos();
     sharedEntries = photos.map(toSharedEntry);
+    requestView(photos, view);
   }
   if (onNew) {
-    await PhotoLibrary.addListener('shared', ({ photos }) => {
+    await PhotoLibrary.addListener('shared', ({ photos, view }) => {
       const fresh = photos.map(toSharedEntry);
       sharedEntries = [...sharedEntries, ...fresh];
       onNew(fresh);
+      requestView(photos, view);
     });
   }
   return sharedEntries;

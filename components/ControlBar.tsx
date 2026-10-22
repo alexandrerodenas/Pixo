@@ -156,12 +156,12 @@ const ControlBar: React.FC<ControlBarProps> = ({
               value={filterLabel}
               onChange={onFilterChange}
               suggestions={allAvailableLabels}
-              className="w-full pl-9 pr-8 py-1.5 text-sm bg-gray-100 dark:bg-gray-700/50 border-transparent focus:bg-white dark:focus:bg-gray-700 rounded-full focus:ring-2 focus:ring-primary transition-all"
+              className="w-full pl-9 pr-16 py-1.5 text-sm bg-gray-100 dark:bg-gray-700/50 border-transparent focus:bg-white dark:focus:bg-gray-700 rounded-full focus:ring-2 focus:ring-primary transition-all"
           />
           {showCreateRuleButton && (
               <button
                   onClick={() => onCreateRuleFromFilter(filterLabel)}
-                  className="absolute right-1 top-1/2 -translate-y-1/2 p-1 text-blue-600 hover:bg-blue-100 rounded-full"
+                  className="absolute right-9 top-1/2 -translate-y-1/2 p-1 text-blue-600 hover:bg-blue-100 rounded-full"
                   title={`Create rule for "${trimmedFilterLabel}"`}
               >
                 <PlusCircle className="w-4 h-4" />

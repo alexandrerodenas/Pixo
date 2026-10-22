@@ -22,6 +22,7 @@ export interface Photo {
   selected: boolean;
   isSaved?: boolean;
   source?: { size: number; lastModified: number }; // the file as scanned, to match saved progress
+  fromPreviousSession?: boolean; // restored from saved progress: analysed before this opening
   customLabel?: string;
 
   // Duplicate Detection
@@ -83,6 +84,8 @@ export interface UserProfile {
   savedFolderName?: string;
   savedOperation?: 'copy' | 'move';
   customLabels?: CustomLabel[];
+
+  startupView?: 'all' | 'new'; // 'new': at opening, only show photos not analysed in a previous session
 
   classifier?: 'mobilenet' | 'clip'; // Classification model (CLIP is an experimental prototype)
 

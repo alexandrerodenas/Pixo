@@ -3,6 +3,7 @@ import * as React from 'react';
 import type { UserProfile, Photo } from '../services/types.ts';
 import { PhotoStatus } from '../services/types.ts';
 import { usePhotoManager } from '../hooks/usePhotoManager.ts';
+import * as phone from '../services/phoneLibrary.ts';
 
 import ControlBar from './ControlBar.tsx'; // Replaces Sidebar
 import FloatingHUD from './FloatingHUD.tsx'; // New Stats/Status Widget
@@ -21,6 +22,10 @@ const PhotoSorter: React.FC<PhotoSorterProps> = ({ userProfile, onProfileUpdate 
   const [filterLabel, setFilterLabel] = React.useState<string>('');
   const [isProfileModalOpen, setProfileModalOpen] = React.useState<boolean>(false);
   const [viewingPhoto, setViewingPhoto] = React.useState<Photo | null>(null);
+
+  // Android: Open with Pixo asks to show one photo; it is shown as soon as it is in the library
+  const [viewRequestId, setViewRequestId] = React.useState<string | null>(null);
+  React.useEffect(() => phone.onViewRequest(setViewRequestId), []);
 
   // Lifted ViewMode state so ControlBar can manage it
   const [viewMode, setViewMode] = React.useState<'grid' | 'folder' | 'zen'>('grid');
@@ -66,6 +71,15 @@ const PhotoSorter: React.FC<PhotoSorterProps> = ({ userProfile, onProfileUpdate 
     blurryPhotoCount
   } = usePhotoManager({ userProfile, onProfileUpdate, filterLabel });
 
+
+  React.useEffect(() => {
+    if (!viewRequestId) return;
+    const photo = photos.get(viewRequestId);
+    if (!photo) return;
+    setViewingPhoto(photo);
+    setViewRequestId(null);
+    phone.clearViewRequest();
+  }, [viewRequestId, photos]);
 
   const noAnalyzedPhotos = React.useMemo(() =>
           Array.from(photos.values()).every(p => p.status !== PhotoStatus.ANALYZED),
@@ -134,6 +148,7 @@ const PhotoSorter: React.FC<PhotoSorterProps> = ({ userProfile, onProfileUpdate 
             viewMode={viewMode}
             setViewMode={setViewMode}
             savedFolderName={userProfile.savedFolderName || 'saves'}
+            newPhotosOnly={userProfile.startupView === 'new'}
         />
 
         {/* Floating HUD (Stats & Status) */}
@@ -150,7 +165,7 @@ const PhotoSorter: React.FC<PhotoSorterProps> = ({ userProfile, onProfileUpdate 
         )}
 
         <PhotoViewerModal
-            photo={viewingPhoto}
+            photo={viewingPhoto ? photos.get(viewingPhoto.id) ?? viewingPhoto : null}
             onClose={() => setViewingPhoto(null)}
         />
 

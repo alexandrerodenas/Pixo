@@ -91,35 +91,3 @@ cd android && ./gradlew assembleDebug
 ```
 
 The APK is written to `android/app/build/outputs/apk/debug/app-debug.apk`. CI builds the same file on every push to a pull request that touches the Android code (see `.github/workflows/android.yml`).
-
-## Roadmap
-
-### Performance
-
-| # | Improvement | Why |
-|---|-------------|-----|
-| 1 | **IndexedDB Thumbnail Cache** | Every directory load re-creates blob URLs from scratch. Returning to a previously-opened folder re-analyzes thumbnails. |
-
-### Code Quality
-
-| # | Improvement |
-|---|-------------|
-| 2 | Reduce unnecessary `useCallback` wrapping — memoization cost sometimes outweighs rerender cost |
-
-### Features (Future)
-
-| Priority | Feature | Rationale |
-|----------|---------|-----------|
-| Medium | **EXIF Metadata** | Parse date, camera, GPS → enable timeline filters, map view |
-| Medium | **Undo / Trash** | Current delete is permanent. Soft-delete with 30-day trash reduces accidents |
-| Low | **Video Support** | Accept `.mp4`, `.mov`, `.avi`. Extract first frame as thumbnail |
-| Low | **Export CSV** | Download a spreadsheet of photo locations, predictions, scores |
-| Low | **Global Keyboard Shortcuts** | Select All, Delete, Toggle Save, etc. (currently only in Zen Mode) |
-| Low | **i18n** | French, German, Spanish locale files |
-| Low | **Photo Rating (1-5★)** | Beyond the binary heart/saved toggle |
-
-### Build & Tooling
-
-| # | Improvement | Why |
-|---|-------------|-----|
-| 3 | **PostCSS Tailwind** (replace CDN) | `index.html` loads `cdn.tailwindcss.com` at runtime (~100 KB). Switching to Vite + PostCSS eliminates the dependency and shrinks the bundle. |

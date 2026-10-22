@@ -3,6 +3,7 @@ import React from 'react';
 import type { Photo } from '../services/types.ts';
 import { PhotoStatus } from '../services/types.ts';
 import { Spinner } from './ui.tsx';
+import ZoomableImage from './ZoomableImage.tsx';
 import { X, Bot, Boxes, Wand2, Focus, AlertTriangle, CheckCircle2 } from 'lucide-react';
 
 interface PhotoViewerModalProps {
@@ -36,10 +37,10 @@ const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({ photo, onClose }) =
   return (
       <div className="fixed inset-0 bg-black/70 z-40 flex items-center justify-center" onClick={onClose}>
         <div className="relative w-full max-w-4xl max-h-[90vh] bg-white dark:bg-gray-800 rounded-lg shadow-2xl flex flex-col md:flex-row" onClick={e => e.stopPropagation()}>
-          <div className="md:w-2/3 bg-black/90 flex items-center justify-center rounded-l-lg">
-            <img src={photo.objectURL} alt="Vue agrandie" className="max-w-full max-h-[90vh] md:max-h-[85vh] object-contain"/>
+          <div className="md:w-2/3 shrink-0 bg-black/90 rounded-t-lg md:rounded-tr-none md:rounded-l-lg overflow-hidden">
+            <ZoomableImage src={photo.objectURL} alt="Vue agrandie" className="w-full h-[50vh] md:h-[85vh]" />
           </div>
-          <div className="md:w-1/3 p-6 flex flex-col overflow-y-auto">
+          <div className="md:w-1/3 p-4 md:p-6 flex flex-col overflow-y-auto min-h-0 flex-1">
             <button onClick={onClose} className="absolute top-3 right-3 p-1.5 bg-gray-200/50 dark:bg-gray-700/50 rounded-full hover:bg-red-500 hover:text-white transition">
               <X className="w-5 h-5"/>
             </button>
