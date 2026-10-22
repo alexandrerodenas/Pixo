@@ -171,7 +171,7 @@ const PhotoSorterSidebar: React.FC<PhotoSorterSidebarProps> = ({
 
           {/* Filters */}
           <div className={`mb-6 transition-all ${isOpen ? '' : 'lg:px-0'}`}>
-            <label className={`font-semibold mb-2 flex items-center gap-2 ${isOpen ? '' : 'lg:justify-center'}`}><Filter className="w-5 h-5 text-secondary shrink-0" /> <span className={`transition-opacity ${isOpen ? 'opacity-100' : 'opacity-0 lg:hidden'}`}>Filter by Label</span></label>
+            <label className={`font-semibold mb-2 flex items-center gap-2 ${isOpen ? '' : 'lg:justify-center'}`}><Filter className="w-5 h-5 text-secondary shrink-0" /> <span className={`transition-opacity ${isOpen ? 'opacity-100' : 'opacity-0 lg:hidden'}`}>Filtrer par libellé</span></label>
             <div className={`${isOpen ? '' : 'lg:hidden'}`}>
               <AutocompleteInput
                   icon={<Search />}

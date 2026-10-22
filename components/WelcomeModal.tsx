@@ -41,12 +41,12 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({ isOpen, onClose }) => {
           </div>
           <div className="p-6 overflow-y-auto space-y-6">
             <p className="text-center text-lg text-gray-700 dark:text-gray-300">
-              Here's a quick guide to help you get started with organizing your photos effortlessly.
+              Un petit guide pour trier tes photos sans effort.
             </p>
             <div className="space-y-5">
               <FeatureItem
                   icon={<ShieldCheck className="w-5 h-5" />}
-                  title="100% Private & Local"
+                  title="100 % privé et local"
                   description="Pixo fonctionne entièrement dans ton navigateur. Tes photos ne sont jamais envoyées, pour une confidentialité totale."
               />
               <FeatureItem
@@ -84,13 +84,13 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({ isOpen, onClose }) => {
                   onChange={(e) => setDontShowAgain(e.target.checked)}
                   className="w-4 h-4 rounded text-primary focus:ring-primary"
               />
-              Don't show this again
+              Ne plus afficher
             </label>
             <button
                 onClick={handleClose}
                 className="w-full sm:w-auto px-6 py-2 bg-primary text-white font-semibold rounded-md hover:bg-primary-dark transition"
             >
-              Get Started
+              C'est parti
             </button>
           </div>
         </div>

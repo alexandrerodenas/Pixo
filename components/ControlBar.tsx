@@ -127,10 +127,10 @@ const ControlBar: React.FC<ControlBarProps> = ({
   const Divider = () => <div className="w-px h-8 bg-gray-300 dark:bg-gray-600 mx-1 flex-shrink-0"></div>;
 
   return (
-      <header className="h-16 bg-white/80 dark:bg-gray-800/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 flex items-center gap-4 px-4 sticky top-0 z-30 shadow-sm">
+      <header className="h-16 bg-white/80 dark:bg-gray-800/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 flex items-center gap-2 md:gap-4 px-2 md:px-4 sticky top-0 z-30 shadow-sm">
 
         {/* Left: Brand & Load */}
-        <div className="flex items-center gap-4 shrink-0">
+        <div className="flex items-center gap-2 md:gap-4 shrink-0">
           <div className="flex items-center gap-2">
             <img src="/logo.png" alt="Pixo" className="w-8 h-8" />
             <span className="font-bold text-xl tracking-tight hidden md:block text-primary dark:text-primary-light">Pixo</span>
@@ -147,7 +147,7 @@ const ControlBar: React.FC<ControlBarProps> = ({
         </div>
 
         {/* Search - Extracted from scroll container to prevent clipping */}
-        <div className="w-48 md:w-64 shrink-0 relative group z-50">
+        <div className="flex-1 min-w-0 md:flex-none md:w-64 md:shrink-0 relative group z-50">
           <AutocompleteInput
               icon={<Search className="w-4 h-4" />}
               placeholder="Rechercher un libellé..."
@@ -271,7 +271,7 @@ const ControlBar: React.FC<ControlBarProps> = ({
         </div>
 
         {/* Center: Actions Toolbar — Mobile (dropdown) */}
-        <div className="flex md:hidden flex-1 items-center justify-end gap-2" ref={mobileMenuRef}>
+        <div className="flex md:hidden shrink-0 items-center justify-end gap-2" ref={mobileMenuRef}>
           {/* More Actions Button */}
           <button
               onClick={() => setMobileMenuOpen(!isMobileMenuOpen)}
@@ -380,7 +380,7 @@ const ControlBar: React.FC<ControlBarProps> = ({
         </div>
 
         {/* Right: Profile */}
-        <div className="shrink-0 pl-2">
+        <div className="shrink-0 md:pl-2">
           <button
               onClick={onOpenProfileSettings}
               className="flex items-center gap-2 p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
