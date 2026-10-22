@@ -85,6 +85,7 @@ export interface UserProfile {
   savedOperation?: 'copy' | 'move';
   customLabels?: CustomLabel[];
 
+  language?: 'auto' | 'fr' | 'en'; // interface language, 'auto' follows the phone
   startupView?: 'all' | 'new'; // 'new': at opening, only show photos not analysed in a previous session
 
   classifier?: 'mobilenet' | 'clip'; // Classification model (CLIP is an experimental prototype)

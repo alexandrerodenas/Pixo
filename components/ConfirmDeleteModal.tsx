@@ -1,5 +1,6 @@
 import React from 'react';
 import { AlertTriangle, Trash2, ShieldCheck, X } from 'lucide-react';
+import { t } from '../services/i18n.ts';
 
 interface ConfirmDeleteModalProps {
   isOpen: boolean;
@@ -31,7 +32,7 @@ const ConfirmDeleteModal: React.FC<ConfirmDeleteModalProps> = ({
           <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
             <h2 className="text-2xl font-bold flex items-center gap-3 text-red-600 dark:text-red-500">
               <AlertTriangle className="w-7 h-7"/>
-              Permanent Deletion
+              {t('del.title')}
             </h2>
             <button onClick={onClose} className="p-1.5 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
               <X className="w-5 h-5"/>
@@ -39,14 +40,14 @@ const ConfirmDeleteModal: React.FC<ConfirmDeleteModalProps> = ({
           </div>
           <div className="p-6 text-gray-700 dark:text-gray-300">
             <p className="text-lg">
-              You are about to permanently delete <strong className="font-bold">{deleteCount}</strong> photo(s).
+              {t('del.about', { count: deleteCount })}
             </p>
             <div className="mt-4 p-4 bg-yellow-100 dark:bg-yellow-900/40 border-l-4 border-yellow-500 text-yellow-800 dark:text-yellow-200 rounded-r-lg">
               <p className="font-semibold">
-                This selection includes <strong className="font-bold">{savedCount}</strong> photo(s) you've marked as saved.
+                {t('del.saved', { count: savedCount })}
               </p>
               <p className="text-sm mt-1">
-                Deleting them will remove them from your disk forever.
+                {t('del.warning')}
               </p>
             </div>
           </div>
@@ -55,7 +56,7 @@ const ConfirmDeleteModal: React.FC<ConfirmDeleteModalProps> = ({
                 onClick={onClose}
                 className="w-full sm:w-auto px-6 py-2 bg-gray-200 dark:bg-gray-600 font-semibold rounded-md hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors whitespace-nowrap"
             >
-              Cancel
+              {t('del.cancel')}
             </button>
 
             {unsavedCount > 0 && (
@@ -64,7 +65,7 @@ const ConfirmDeleteModal: React.FC<ConfirmDeleteModalProps> = ({
                     className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2 bg-green-600 text-white font-semibold rounded-md hover:bg-green-700 transition whitespace-nowrap"
                 >
                   <ShieldCheck className="w-5 h-5"/>
-                  <span>Delete {unsavedCount} Unsaved</span>
+                  <span>{t('del.unsaved', { count: unsavedCount })}</span>
                 </button>
             )}
 
@@ -73,7 +74,7 @@ const ConfirmDeleteModal: React.FC<ConfirmDeleteModalProps> = ({
                 className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2 text-red-600 border border-red-600 font-semibold rounded-md hover:bg-red-600 hover:text-white transition whitespace-nowrap"
             >
               <Trash2 className="w-5 h-5"/>
-              <span>Delete All {deleteCount}</span>
+              <span>{t('del.all', { count: deleteCount })}</span>
             </button>
           </div>
         </div>

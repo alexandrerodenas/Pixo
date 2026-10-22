@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import type { ModelsLoadState } from '../services/types.ts';
 import { ChevronDown, ChevronUp, Activity, Image as ImageIcon, CheckSquare, Heart, AlertCircle, CheckCircle2, Loader } from 'lucide-react';
 import { Spinner } from './ui.tsx';
+import { t } from '../services/i18n.ts';
 
 interface FloatingHUDProps {
   totalCount: number;
@@ -40,7 +41,7 @@ const FloatingHUD: React.FC<FloatingHUDProps> = ({
           >
             <div className="flex items-center gap-2 font-bold text-sm text-gray-800 dark:text-gray-100">
               <Activity className="w-4 h-4 text-primary" />
-              {isExpanded && <span>Statistiques et état</span>}
+              {isExpanded && <span>{t('hud.title')}</span>}
             </div>
             {isExpanded ? <ChevronDown className="w-4 h-4 text-gray-400" /> : <ChevronUp className="w-4 h-4 text-gray-400" />}
           </button>
@@ -67,8 +68,8 @@ const FloatingHUD: React.FC<FloatingHUDProps> = ({
                 {/* Processing Status */}
                 {processingQueueCount > 0 && (
                     <div className="flex items-center justify-between text-xs bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-300 p-2 rounded-md">
-                      <span className="flex items-center gap-2"><Spinner className="w-3 h-3" /> En cours</span>
-                      <span className="font-bold">{processingQueueCount} remaining</span>
+                      <span className="flex items-center gap-2"><Spinner className="w-3 h-3" /> {t('hud.running')}</span>
+                      <span className="font-bold">{t('hud.remaining', { count: processingQueueCount })}</span>
                     </div>
                 )}
 
@@ -79,9 +80,9 @@ const FloatingHUD: React.FC<FloatingHUDProps> = ({
 
                 {/* Technical Footer */}
                 <div className="flex items-center justify-between text-[10px] text-gray-400 uppercase tracking-wider font-mono pt-1">
-                  <span>{tfBackend || 'Init...'}</span>
+                  <span>{tfBackend || t('hud.init')}</span>
                   <div className="flex items-center gap-1">
-                    <span>Modèles IA :</span>
+                    <span>{t('hud.models')}</span>
                     {isModelLoading ? <Loader className="w-3 h-3 animate-spin" /> :
                         areModelsReady ? <CheckCircle2 className="w-3 h-3 text-green-500" /> :
                             <AlertCircle className="w-3 h-3 text-red-500" />}

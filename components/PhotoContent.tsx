@@ -162,25 +162,25 @@ const PhotoContent: React.FC<PhotoContentProps> = ({
     }
 
     if (photosToShow.size === 0 && !(hidingPrevious && previousCount > 0)) {
-      let title = "Aucune photo correspondante";
-      let message = "Aucune photo ne correspond aux critères. Essaie de modifier ta recherche.";
+      let title = t('content.none.title');
+      let message = t('content.none.body');
       let Icon = Filter;
 
       if (isolateDuplicates) {
-        title = "Aucun doublon trouvé";
-        message = "Bonne nouvelle ! Aucun doublon dans cette sélection.";
+        title = t('content.dup.title');
+        message = t('content.dup.body');
         Icon = Copy;
       } else if (isolateSelection) {
-        title = "Aucune photo sélectionnée";
-        message = "You're in isolation mode, but no photos are selected. Clear the isolation to see all photos.";
+        title = t('content.sel.title');
+        message = t('content.sel.body');
         Icon = EyeOff;
       } else if (isolateSaved) {
-        title = "Aucune photo gardée";
-        message = "You're in isolation mode, but no photos are saved. Click the heart on photos to save them.";
+        title = t('content.saved.title');
+        message = t('content.saved.body');
         Icon = Heart;
       } else if (isolateBlurry) {
-        title = "Aucune photo floue";
-        message = "Excellent! All your photos appear to be sharp.";
+        title = t('content.blur.title');
+        message = t('content.blur.body');
         Icon = AlertTriangle;
       }
 
@@ -198,8 +198,8 @@ const PhotoContent: React.FC<PhotoContentProps> = ({
       return (
           <div className="flex flex-col items-center justify-center h-full text-center text-gray-500 dark:text-gray-400">
             <Check className="w-24 h-24 mb-4 text-gray-300 dark:text-gray-600" />
-            <h2 className="text-2xl font-semibold">Aucune nouvelle photo</h2>
-            <p className="mt-2 max-w-sm">Toutes tes photos ont déjà été analysées lors d'une ouverture précédente.</p>
+            <h2 className="text-2xl font-semibold">{t('content.noNew.title')}</h2>
+            <p className="mt-2 max-w-sm">{t('content.noNew.body')}</p>
           </div>
       );
     }
@@ -209,8 +209,8 @@ const PhotoContent: React.FC<PhotoContentProps> = ({
         return (
             <div className="flex flex-col items-center justify-center h-full text-center text-gray-500 dark:text-gray-400">
               <Filter className="w-24 h-24 mb-4 text-gray-300 dark:text-gray-600" />
-              <h2 className="text-2xl font-semibold">Aucune photo correspondante</h2>
-              <p className="mt-2 max-w-sm">Aucune photo ne correspond à ton filtre. Essaie un autre terme.</p>
+              <h2 className="text-2xl font-semibold">{t('content.none.title')}</h2>
+              <p className="mt-2 max-w-sm">{t('content.filter.body')}</p>
             </div>
         );
       }
@@ -286,7 +286,7 @@ const PhotoContent: React.FC<PhotoContentProps> = ({
                 style={{ opacity: Math.min(1, pull / PULL_THRESHOLD) }}
             >
               <ArrowDown className={`w-3 h-3 transition-transform ${pull >= PULL_THRESHOLD ? 'rotate-180' : ''}`} />
-              {pull >= PULL_THRESHOLD ? 'Relâcher pour repartir du début' : 'Tirer pour repartir du début'}
+              {pull >= PULL_THRESHOLD ? t('content.release') : t('content.pull')}
             </div>
         )}
         {renderContent()}
@@ -296,7 +296,7 @@ const PhotoContent: React.FC<PhotoContentProps> = ({
                   onClick={() => setShowPrevious(true)}
                   className="px-4 py-2 rounded-lg bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-sm font-semibold hover:opacity-90"
               >
-                Charger les {previousCount} photos déjà analysées
+                {t('content.loadPrevious', { count: previousCount })}
               </button>
             </div>
         )}

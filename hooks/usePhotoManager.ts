@@ -10,6 +10,7 @@ import { useKeepScreenOn } from './useKeepScreenOn.ts';
 import { useBackgroundProgress } from './useBackgroundProgress.ts';
 import { findDuplicateGroups } from '../services/duplicateDetection.ts';
 import { revokePhotoURLs } from '../services/photoUrls.ts';
+import { t } from '../services/i18n.ts';
 
 
 interface UsePhotoManagerProps {
@@ -153,7 +154,7 @@ export const usePhotoManager = ({ userProfile, onProfileUpdate, filterLabel }: U
       return newPhotos;
     });
 
-    setStatusMessage(`${allAreSaved ? 'Unsaved' : 'Saved'} ${photosToSave.length} photo(s).`);
+    setStatusMessage(t(allAreSaved ? 'pm.unsaved' : 'pm.saved', { count: photosToSave.length }));
   }, [setPhotos, setStatusMessage]);
 
   const handleToggleIsolateSaved = useCallback(() => {
@@ -205,7 +206,7 @@ export const usePhotoManager = ({ userProfile, onProfileUpdate, filterLabel }: U
       setConfirmDeleteState({ isOpen: true, photosToDelete: photos });
     } else {
       // No saved photos in selection, ask for simple confirmation
-      if (skipConfirm || window.confirm(`Supprimer définitivement ${photos.length} photo(s) ? Cette action est irréversible.`)) {
+      if (skipConfirm || window.confirm(t('pm.confirmDelete', { count: photos.length }))) {
         handleDeletePhotos(photos);
       }
     }
@@ -258,18 +259,18 @@ export const usePhotoManager = ({ userProfile, onProfileUpdate, filterLabel }: U
   const handleReanalyze = useCallback(() => {
     const total = Array.from(photos.values()).filter(p => p.status === PhotoStatus.ANALYZED || p.status === PhotoStatus.UNCATEGORIZED || p.status === PhotoStatus.ERROR).length;
     if (total === 0) {
-      setStatusMessage("Aucune photo analysée à relancer.");
+      setStatusMessage(t('pm.noneToReanalyze'));
       return;
     }
-    if (!window.confirm(`Relancer l'analyse de ${total} photo(s) avec les réglages actuels du profil ? Tes sélections et tes favoris sont conservés.`)) return;
+    if (!window.confirm(t('pm.confirmReanalyze', { count: total }))) return;
     const count = reanalyzeAll();
-    setStatusMessage(`Nouvelle analyse de ${count} photo(s) en cours.`);
+    setStatusMessage(t('pm.reanalyzing', { count }));
   }, [photos, reanalyzeAll, setStatusMessage]);
 
   const handleApplyRulesManually = useCallback(() => {
     const photosToProcess = Array.from(photos.values()).filter(p => p.status === PhotoStatus.ANALYZED);
     if (photosToProcess.length === 0) {
-      setStatusMessage("No analyzed photos to apply rules to.");
+      setStatusMessage(t('pm.noAnalyzed'));
       return;
     }
 
@@ -302,23 +303,23 @@ export const usePhotoManager = ({ userProfile, onProfileUpdate, filterLabel }: U
     });
 
     if (newlySelectedCount > 0) {
-      setStatusMessage(`Selected ${newlySelectedCount} new photo(s) based on your rules.`);
+      setStatusMessage(t('pm.ruleSelected', { count: newlySelectedCount }));
     } else if (matchedCount > 0) {
-      setStatusMessage(`All ${matchedCount} matching photo(s) were already selected.`);
+      setStatusMessage(t('pm.ruleAlready', { count: matchedCount }));
     } else {
-      setStatusMessage("No photos matched your rules. ✨");
+      setStatusMessage(t('pm.ruleNone'));
     }
   }, [photos, applyRules, userProfileRef, setPhotos, setStatusMessage]);
 
   const handleFindDuplicates = useCallback(async () => {
-    setStatusMessage("Scanning for duplicates (this may take a moment)...");
+    setStatusMessage(t('pm.dupScanning'));
     const photosArray = Array.from(photos.values());
 
     try {
       const groups = await findDuplicateGroups(photosArray);
 
       if (groups.length === 0) {
-        setStatusMessage("No duplicates found! 🎉");
+        setStatusMessage(t('pm.dupNone'));
         return;
       }
 
@@ -349,17 +350,17 @@ export const usePhotoManager = ({ userProfile, onProfileUpdate, filterLabel }: U
       setIsolateBlurry(false);
       if (isolateSelection) handleToggleIsolateSelection();
 
-      setStatusMessage(`Found ${groups.length} groups of duplicates. Auto-selected ${groups.reduce((acc, g) => acc + g.photos.length - 1, 0)} redundancies.`);
+      setStatusMessage(t('pm.dupFound', { groups: groups.length, count: groups.reduce((acc, g) => acc + g.photos.length - 1, 0) }));
 
     } catch (error) {
       console.error(error);
-      setStatusMessage("Error finding duplicates. See console.");
+      setStatusMessage(t('pm.dupError'));
     }
   }, [photos, setStatusMessage, isolateSelection, handleToggleIsolateSelection]);
 
   const handleCreateRuleFromSelection = useCallback(() => {
     if (selectedPhotos.length === 0) {
-      setStatusMessage("Please select photos to create rules from.");
+      setStatusMessage(t('pm.pickToRule'));
       return;
     }
 
@@ -440,7 +441,7 @@ export const usePhotoManager = ({ userProfile, onProfileUpdate, filterLabel }: U
     }
 
     if (newClassificationRules.length === 0 && newDetectionRules.length === 0) {
-      setStatusMessage("No new rules created. Common labels may already have rules.");
+      setStatusMessage(t('pm.noNewRules'));
       return;
     }
 
@@ -451,7 +452,7 @@ export const usePhotoManager = ({ userProfile, onProfileUpdate, filterLabel }: U
     };
     onProfileUpdate(updatedProfile);
     const totalNewRules = newClassificationRules.length + newDetectionRules.length;
-    setStatusMessage(`Added ${totalNewRules} new smart rule(s) from your selection.`);
+    setStatusMessage(t('pm.rulesAdded', { count: totalNewRules }));
   }, [selectedPhotos, onProfileUpdate, setStatusMessage]);
 
   const handleCreateRuleFromFilter = useCallback((label: string) => {
@@ -477,9 +478,9 @@ export const usePhotoManager = ({ userProfile, onProfileUpdate, filterLabel }: U
 
     if (ruleAdded) {
       onProfileUpdate(newProfile);
-      setStatusMessage(`Created new rule for "${trimmedLabel}" (any confidence).`);
+      setStatusMessage(t('pm.ruleCreated', { label: trimmedLabel }));
     } else {
-      setStatusMessage(`Rule for "${trimmedLabel}" already exists.`);
+      setStatusMessage(t('pm.ruleExists', { label: trimmedLabel }));
     }
   }, [onProfileUpdate, setStatusMessage]);
 

@@ -6,6 +6,7 @@ import { RulesManager } from './RulesManager.tsx';
 import { CustomLabelsManager } from './CustomLabelsManager.tsx';
 import { parseImportedProfile } from '../services/profileImport.ts';
 import { User, X, Wand2, Settings, Save, Upload, Download, Tags } from 'lucide-react';
+import { t } from '../services/i18n.ts';
 
 interface ProfileSettingsModalProps {
   isOpen: boolean;
@@ -50,7 +51,7 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ isOpen, onC
       URL.revokeObjectURL(url);
     } catch (error) {
       console.error("Failed to export profile:", error);
-      alert("Une erreur est survenue pendant l'export du profil.");
+      alert(t('prof.exportError'));
     }
   };
 
@@ -67,11 +68,11 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ isOpen, onC
       try {
         const text = e.target?.result;
         if (typeof text !== 'string') {
-          throw new Error("Impossible de lire le contenu du fichier.");
+          throw new Error(t('prof.readFail'));
         }
         const importedProfile = parseImportedProfile(JSON.parse(text));
         if (!importedProfile) {
-          throw new Error("Format de fichier de profil invalide.");
+          throw new Error(t('prof.badFormat'));
         }
 
         const newProfileState: UserProfile = {
@@ -83,14 +84,14 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ isOpen, onC
           savedOperation: importedProfile.savedOperation || 'move',
         };
         setEditedProfile(newProfileState);
-        alert("Profil importé ! Vérifie les changements puis clique sur « Enregistrer » pour les appliquer.");
+        alert(t('prof.imported'));
       } catch (error) {
         console.error("Failed to import profile:", error);
-        alert("Impossible d'importer le profil. Vérifie que c'est un fichier JSON exporté depuis Pixo.");
+        alert(t('prof.importError'));
       }
     };
     reader.onerror = () => {
-      alert("Erreur de lecture du fichier.");
+      alert(t('prof.readError'));
     };
     reader.readAsText(file);
 
@@ -125,19 +126,19 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ isOpen, onC
               className="hidden"
           />
           <div className="px-4 sm:px-6 py-3 sm:py-6 pt-[max(0.75rem,env(safe-area-inset-top))] border-b border-gray-200 dark:border-gray-700 flex justify-between items-center flex-shrink-0">
-            <h2 className="text-xl sm:text-2xl font-bold flex items-center gap-2"><User className="text-primary"/> Profil et règles</h2>
-            <button onClick={onClose} aria-label="Fermer" className="p-2 -mr-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600"><X className="w-5 h-5"/></button>
+            <h2 className="text-xl sm:text-2xl font-bold flex items-center gap-2"><User className="text-primary"/> {t('prof.title')}</h2>
+            <button onClick={onClose} aria-label={t('prof.close')} className="p-2 -mr-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600"><X className="w-5 h-5"/></button>
           </div>
           <div className="border-b border-gray-200 dark:border-gray-700 px-2 sm:px-6 bg-gray-50 dark:bg-gray-800/50 flex-shrink-0">
             <nav className="flex -mb-px">
               <TabButton isActive={activeTab === 'profile'} onClick={() => setActiveTab('profile')} icon={<Settings className="w-4 h-4"/>}>
-                Général
+                {t('prof.tabGeneral')}
               </TabButton>
               <TabButton isActive={activeTab === 'rules'} onClick={() => setActiveTab('rules')} icon={<Wand2 className="w-4 h-4" />}>
-                Règles IA
+                {t('prof.tabRules')}
               </TabButton>
               <TabButton isActive={activeTab === 'labels'} onClick={() => setActiveTab('labels')} icon={<Tags className="w-4 h-4" />}>
-                Libellés
+                {t('prof.tabLabels')}
               </TabButton>
             </nav>
           </div>
@@ -153,16 +154,16 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ isOpen, onC
             )}
           </div>
           <div className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 flex-shrink-0">
-            <button onClick={handleImportClick} aria-label="Importer un profil" title="Importer un profil" className="flex items-center justify-center gap-2 p-2.5 sm:px-3 sm:py-2 text-sm bg-gray-200 dark:bg-gray-700 font-semibold rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 transition">
-              <Upload className="w-5 h-5 sm:w-4 sm:h-4"/> <span className="hidden sm:inline">Importer</span>
+            <button onClick={handleImportClick} aria-label={t('prof.importLabel')} title={t('prof.importLabel')} className="flex items-center justify-center gap-2 p-2.5 sm:px-3 sm:py-2 text-sm bg-gray-200 dark:bg-gray-700 font-semibold rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 transition">
+              <Upload className="w-5 h-5 sm:w-4 sm:h-4"/> <span className="hidden sm:inline">{t('prof.import')}</span>
             </button>
-            <button onClick={handleExportProfile} aria-label="Exporter le profil" title="Exporter le profil" className="flex items-center justify-center gap-2 p-2.5 sm:px-3 sm:py-2 text-sm bg-gray-200 dark:bg-gray-700 font-semibold rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 transition">
-              <Download className="w-5 h-5 sm:w-4 sm:h-4"/> <span className="hidden sm:inline">Exporter</span>
+            <button onClick={handleExportProfile} aria-label={t('prof.exportLabel')} title={t('prof.exportLabel')} className="flex items-center justify-center gap-2 p-2.5 sm:px-3 sm:py-2 text-sm bg-gray-200 dark:bg-gray-700 font-semibold rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 transition">
+              <Download className="w-5 h-5 sm:w-4 sm:h-4"/> <span className="hidden sm:inline">{t('prof.export')}</span>
             </button>
             <div className="flex-1 sm:flex-none sm:ml-auto flex justify-end gap-3">
-              <button onClick={onClose} className="hidden sm:block px-4 py-2 bg-gray-200 dark:bg-gray-600 font-semibold rounded-md hover:bg-gray-300 dark:hover:bg-gray-500 transition">Annuler</button>
+              <button onClick={onClose} className="hidden sm:block px-4 py-2 bg-gray-200 dark:bg-gray-600 font-semibold rounded-md hover:bg-gray-300 dark:hover:bg-gray-500 transition">{t('prof.cancel')}</button>
               <button onClick={handleSave} className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 sm:py-2 bg-primary text-white font-semibold rounded-md hover:bg-primary-dark transition">
-                <Save className="w-5 h-5"/> Enregistrer
+                <Save className="w-5 h-5"/> {t('prof.save')}
               </button>
             </div>
           </div>
