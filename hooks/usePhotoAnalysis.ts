@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import type { UserProfile, Photo, FilterRule, Prediction, ModelsLoadState } from '../services/types.ts';
 import { PhotoStatus } from '../services/types.ts';
 import * as api from '../services/api.ts';
+import { classifyWithClip } from '../services/clipClient.ts';
 
 
 type PhotoPatch = (photo: Photo | undefined) => Photo | undefined;
@@ -112,6 +113,14 @@ export const usePhotoAnalysis = (
         blurThreshold,
         sharpThreshold,
       });
+
+      if (userProfileRef.current?.classifier === 'clip') {
+        try {
+          result.classifications = await classifyWithClip(photoId, fileBlob);
+        } catch (error) {
+          console.warn('CLIP unavailable, keeping MobileNet results:', error);
+        }
+      }
 
       const threshold = userProfileRef.current?.unknownThreshold ?? 10;
       const isUncategorized = result.classifications.length === 0 || result.classifications.every(p => (p.score * 100) < threshold);

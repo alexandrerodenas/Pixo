@@ -84,6 +84,8 @@ export interface UserProfile {
   savedOperation?: 'copy' | 'move';
   customLabels?: CustomLabel[];
 
+  classifier?: 'mobilenet' | 'clip'; // Classification model (CLIP is an experimental prototype)
+
   // Blur Settings
   blurThreshold?: number; // Raw variance below this is 'blurry'
   sharpThreshold?: number; // Raw variance above this is 'sharp'

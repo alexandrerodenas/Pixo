@@ -63,6 +63,7 @@ export function parseImportedProfile(raw: unknown): ImportedProfile | null {
     customLabels,
   };
 
+  if (raw.classifier === 'mobilenet' || raw.classifier === 'clip') profile.classifier = raw.classifier;
   if (isNumberInRange(raw.unknownThreshold, 0, 100)) profile.unknownThreshold = raw.unknownThreshold;
   if (THUMBNAIL_SIZES.includes(raw.thumbnailSize as ThumbnailSize)) profile.thumbnailSize = raw.thumbnailSize as ThumbnailSize;
   if (raw.savedOperation === 'copy' || raw.savedOperation === 'move') profile.savedOperation = raw.savedOperation;

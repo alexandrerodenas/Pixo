@@ -1,7 +1,8 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import type { UserProfile, ThumbnailSize } from '../services/types.ts';
 import { Info } from 'lucide-react';
+import { subscribeClipStats, type ClipStats } from '../services/clipClient.ts';
 
 interface ProfileEditorProps {
   profile: UserProfile;
@@ -14,6 +15,9 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ profile, setProfil
   const handleInputChange = (field: keyof UserProfile, value: any) => {
     setProfile(p => ({ ...p, [field]: value }));
   };
+
+  const [clipStats, setClipStats] = useState<ClipStats>({ loaded: false, photos: 0 });
+  useEffect(() => subscribeClipStats(setClipStats), []);
 
   const blurThreshold = profile.blurThreshold ?? 100;
   const sharpThreshold = profile.sharpThreshold ?? 300;
@@ -68,6 +72,22 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ profile, setProfil
                 </button>
             ))}
           </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-1">Modèle de reconnaissance (expérimental)</label>
+          <select value={profile.classifier || 'mobilenet'} onChange={e => handleInputChange('classifier', e.target.value)} className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary">
+            <option value="mobilenet">MobileNet (léger, par défaut)</option>
+            <option value="clip">CLIP (plus précis, téléchargement au premier usage)</option>
+          </select>
+          {profile.classifier === 'clip' && (
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              {clipStats.loaded
+                ? `Mesures : ${clipStats.downloadedMB} Mo téléchargés, chargé en ${((clipStats.loadMs ?? 0) / 1000).toFixed(1)} s (${clipStats.device})` +
+                  (clipStats.avgMs ? `, ${clipStats.avgMs} ms par photo sur ${clipStats.photos} photos` : ', aucune photo analysée pour l\'instant')
+                : 'Le modèle se télécharge à la prochaine analyse. Les mesures s\'affichent ici ensuite. Les nouvelles photos seulement sont concernées.'}
+            </p>
+          )}
         </div>
 
         <div>
