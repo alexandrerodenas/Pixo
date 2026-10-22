@@ -12,6 +12,7 @@
   "dependencies": {
     "@capacitor/android": "^8.5.3",
     "@capacitor/core": "^8.5.3",
+    "@huggingface/transformers": "^4.3.1",
     "@tanstack/react-virtual": "^3.13.26",
     "@tensorflow-models/coco-ssd": "^2.2.3",
     "@tensorflow-models/mobilenet": "^2.1.1",
