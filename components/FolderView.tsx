@@ -239,7 +239,7 @@ const FolderView: React.FC<FolderViewProps> = ({ photos, onSelectPhoto, onViewPh
                                   </div>
                                   {isLabelExpanded && (
                                       <div className={`pl-7 pt-2 grid ${sizeClassesAnalyzed[thumbnailSize]} gap-4`}>
-                                        {labelPhotos.map(photo => <PhotoCard key={photo.id} photo={photo} onSelect={onSelectPhoto} onView={onViewPhoto} onFilterChange={onFilterChange} onToggleSave={onToggleSave} />)}
+                                        {labelPhotos.map(photo => <PhotoCard key={photo.id} photo={photo} onSelect={onSelectPhoto} onView={onViewPhoto} onFilterChange={onFilterChange} onToggleSave={onToggleSave} onDelete={(p) => onRequestDelete([p])} />)}
                                       </div>
                                   )}
                                 </div>
@@ -247,7 +247,7 @@ const FolderView: React.FC<FolderViewProps> = ({ photos, onSelectPhoto, onViewPh
                           })
                       ) : (
                           <div className={`grid ${sizeClassesOther[thumbnailSize]} gap-4`}>
-                            {(content as Photo[]).map(photo => <PhotoCard key={photo.id} photo={photo} onSelect={onSelectPhoto} onView={onViewPhoto} onFilterChange={onFilterChange} onToggleSave={onToggleSave} />)}
+                            {(content as Photo[]).map(photo => <PhotoCard key={photo.id} photo={photo} onSelect={onSelectPhoto} onView={onViewPhoto} onFilterChange={onFilterChange} onToggleSave={onToggleSave} onDelete={(p) => onRequestDelete([p])} />)}
                           </div>
                       )}
                     </div>

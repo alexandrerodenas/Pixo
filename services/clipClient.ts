@@ -1,5 +1,10 @@
 // Main-thread interface for the CLIP worker, with the measurements shown in the profile screen.
 
+import { confirmModelDownload, markModelsDownloaded } from './downloadGuard.ts';
+
+// Approximate download of the CLIP model and the ONNX runtime, shown in the mobile-data warning
+const CLIP_SIZE_MB = 90;
+
 export interface ClipStats {
   loaded: boolean;
   device?: string;
@@ -28,8 +33,14 @@ export function subscribeClipStats(listener: (s: ClipStats) => void): () => void
 
 function start(): Promise<void> {
   if (ready) return ready;
+  ready = confirmModelDownload('clip', CLIP_SIZE_MB).then(createWorker);
+  ready.catch(() => { worker?.terminate(); worker = null; ready = null; });
+  return ready;
+}
+
+function createWorker(): Promise<void> {
   worker = new Worker(new URL('../workers/clip.worker.ts', import.meta.url), { type: 'module' });
-  ready = new Promise<void>((resolve, reject) => {
+  return new Promise<void>((resolve, reject) => {
     worker!.onmessage = (event: MessageEvent) => {
       const msg = event.data;
       if (msg.type === 'initialized') {
@@ -38,6 +49,7 @@ function start(): Promise<void> {
           downloadedMB: Math.round(msg.downloadedBytes / 1e5) / 10,
         });
         publish();
+        markModelsDownloaded('clip');
         resolve();
       } else if (msg.type === 'result') {
         totalMs += msg.ms;
@@ -58,8 +70,6 @@ function start(): Promise<void> {
     worker!.onerror = e => reject(new Error(e.message));
     worker!.postMessage({ type: 'initialize' });
   });
-  ready.catch(() => { worker?.terminate(); worker = null; ready = null; });
-  return ready;
 }
 
 /** Classifies a photo with CLIP. Rejects when the model cannot load: callers fall back to MobileNet. */

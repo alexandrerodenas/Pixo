@@ -20,6 +20,11 @@ interface PhotoLibraryPlugin {
   movePhotos(options: { mediaIds: number[]; folder: string }): Promise<{ done: number[] }>;
   copyPhotos(options: { mediaIds: number[]; folder: string }): Promise<{ done: number[] }>;
   getDeviceName(): Promise<{ name: string }>;
+  updateProgress(options: { done: number; total: number; text: string }): Promise<void>;
+  clearProgress(options: { doneText?: string }): Promise<void>;
+  requestNotifications(): Promise<void>;
+  networkType(): Promise<{ type: 'wifi' | 'cellular' | 'other' | 'none'; metered: boolean }>;
+  closeApp(): Promise<void>;
   getSharedPhotos(): Promise<{ photos: SharedPhoto[] }>;
   addListener(event: 'shared', listener: (data: { photos: SharedPhoto[] }) => void): Promise<PluginListenerHandle>;
 }
@@ -163,4 +168,31 @@ export function ownerFromDeviceName(deviceName: string): string {
     name.match(/^(\p{L}[\p{L}\-]*)\s+(?:phone|telefon|téléphone)$/iu);
   const first = match?.[1] ?? '';
   return first ? first.charAt(0).toUpperCase() + first.slice(1) : '';
+}
+
+// --- Background progress, network, app ---
+
+export const showAnalysisProgress = (done: number, total: number, text: string) =>
+  PhotoLibrary.updateProgress({ done, total, text }).catch(() => { /* not critical */ });
+
+/** Removes the progress notification; with doneText, leaves a "finished" notification instead. */
+export const hideAnalysisProgress = (doneText?: string) =>
+  PhotoLibrary.clearProgress({ doneText }).catch(() => { /* not critical */ });
+
+export const askNotificationPermission = () => PhotoLibrary.requestNotifications().catch(() => { /* not critical */ });
+
+export const closeApp = () => PhotoLibrary.closeApp().catch(() => { /* not critical */ });
+
+/** True on a mobile-data connection (or any metered one), where big downloads should be confirmed. */
+export async function isOnMobileData(): Promise<boolean> {
+  try {
+    if (isPhoneLibrary()) {
+      const { type, metered } = await PhotoLibrary.networkType();
+      return type === 'cellular' || (type !== 'wifi' && metered);
+    }
+    const connection = (navigator as any).connection;
+    return connection?.type === 'cellular' || connection?.saveData === true;
+  } catch {
+    return false;
+  }
 }

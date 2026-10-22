@@ -3,6 +3,7 @@ import React, { useRef, useEffect, useState } from 'react';
 import type { Photo } from '../services/types.ts';
 import { PhotoStatus } from '../services/types.ts';
 import { StatusPill } from './ui.tsx';
+import PhotoActionMenu from './PhotoActionMenu.tsx';
 import { Check, Tag, Boxes, Heart, Bookmark, AlertTriangle } from 'lucide-react';
 
 interface PhotoCardProps {
@@ -11,12 +12,45 @@ interface PhotoCardProps {
   onView: (photo: Photo) => void;
   onFilterChange: (label: string) => void;
   onToggleSave: (id: string) => void;
+  onDelete?: (photo: Photo) => void;
 }
 
-function PhotoCard({ photo, onSelect, onView, onFilterChange, onToggleSave }: PhotoCardProps) {
+const LONG_PRESS_MS = 500;
+const LONG_PRESS_MOVE_PX = 10;
+
+function PhotoCard({ photo, onSelect, onView, onFilterChange, onToggleSave, onDelete }: PhotoCardProps) {
   const clickTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
   const [isVisible, setIsVisible] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const pressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pressStartRef = useRef<{ x: number; y: number } | null>(null);
+  const longPressedRef = useRef(false);
+
+  const cancelPress = () => {
+    if (pressTimerRef.current) clearTimeout(pressTimerRef.current);
+    pressTimerRef.current = null;
+    pressStartRef.current = null;
+  };
+
+  const openMenu = () => {
+    cancelPress();
+    longPressedRef.current = true;
+    try { navigator.vibrate?.(15); } catch { /* not critical */ }
+    setMenuOpen(true);
+  };
+
+  const handlePointerDown = (e: React.PointerEvent) => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    longPressedRef.current = false;
+    pressStartRef.current = { x: e.clientX, y: e.clientY };
+    pressTimerRef.current = setTimeout(openMenu, LONG_PRESS_MS);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    const start = pressStartRef.current;
+    if (start && Math.hypot(e.clientX - start.x, e.clientY - start.y) > LONG_PRESS_MOVE_PX) cancelPress();
+  };
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -43,11 +77,17 @@ function PhotoCard({ photo, onSelect, onView, onFilterChange, onToggleSave }: Ph
       if (clickTimeoutRef.current) {
         clearTimeout(clickTimeoutRef.current);
       }
+      if (pressTimerRef.current) clearTimeout(pressTimerRef.current);
     };
   }, []);
 
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
+    // The click that ends a long press must not also select or open the photo
+    if (longPressedRef.current) {
+      longPressedRef.current = false;
+      return;
+    }
     // If a timer is already running, it's a double click.
     if (clickTimeoutRef.current) {
       clearTimeout(clickTimeoutRef.current);
@@ -81,9 +121,25 @@ function PhotoCard({ photo, onSelect, onView, onFilterChange, onToggleSave }: Ph
   return (
       <div
           ref={cardRef}
-          className="relative group aspect-square bg-gray-200 dark:bg-gray-800 rounded-lg overflow-hidden cursor-pointer shadow-md hover:shadow-xl transition-all duration-300"
+          className="relative group aspect-square select-none [-webkit-touch-callout:none] bg-gray-200 dark:bg-gray-800 rounded-lg overflow-hidden cursor-pointer shadow-md hover:shadow-xl transition-all duration-300"
           onClick={handleClick}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={cancelPress}
+          onPointerCancel={cancelPress}
+          onPointerLeave={cancelPress}
+          onContextMenu={(e) => { e.preventDefault(); openMenu(); }}
       >
+        {menuOpen && (
+            <PhotoActionMenu
+                photo={photo}
+                onClose={() => setMenuOpen(false)}
+                onView={() => onView(photo)}
+                onSelect={() => onSelect(photo.id)}
+                onToggleSave={() => onToggleSave(photo.id)}
+                onDelete={onDelete ? () => onDelete(photo) : undefined}
+            />
+        )}
         {isVisible && (
             <>
               <img src={photo.thumbnailURL ?? photo.objectURL} alt={photo.id} decoding="async" className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" loading="lazy" />

@@ -186,7 +186,7 @@ const PhotoContent: React.FC<PhotoContentProps> = ({
             </div>
         );
       }
-      return <PhotoGrid photos={filteredPhotosForGrid} onSelectPhoto={onSelectPhoto} onViewPhoto={onViewPhoto} thumbnailSize={thumbnailSize} onFilterChange={onFilterChange} onToggleSavePhoto={onToggleSavePhoto} />;
+      return <PhotoGrid photos={filteredPhotosForGrid} onSelectPhoto={onSelectPhoto} onViewPhoto={onViewPhoto} thumbnailSize={thumbnailSize} onFilterChange={onFilterChange} onToggleSavePhoto={onToggleSavePhoto} onRequestDelete={onRequestDelete} />;
     }
 
     if (viewMode === 'zen') {

@@ -10,6 +10,9 @@ import android.content.Context;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.media.MediaScannerConnection;
+import android.net.ConnectivityManager;
+import android.net.Network;
+import android.net.NetworkCapabilities;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
@@ -416,5 +419,65 @@ public class PhotoLibraryPlugin extends Plugin {
         JSObject ret = new JSObject();
         ret.put("name", name == null ? "" : name);
         call.resolve(ret);
+    }
+
+    // --- Background progress, network, app ---
+
+    /** Shows (or updates) the analysis progress notification and keeps the app alive in the background. */
+    @PluginMethod
+    public void updateProgress(PluginCall call) {
+        try {
+            AnalysisService.update(getContext(), call.getInt("done", 0), call.getInt("total", 0), call.getString("text"));
+        } catch (Exception e) {
+            // Starting a foreground service can be refused (background restrictions): the analysis goes on without it
+        }
+        call.resolve();
+    }
+
+    @PluginMethod
+    public void clearProgress(PluginCall call) {
+        AnalysisService.stop(getContext());
+        String doneText = call.getString("doneText");
+        if (doneText != null) AnalysisService.notifyDone(getContext(), doneText);
+        call.resolve();
+    }
+
+    /** Asks for the permission to show notifications (Android 13+), once the user starts a long analysis. */
+    @PluginMethod
+    public void requestNotifications(PluginCall call) {
+        if (Build.VERSION.SDK_INT >= 33 && getActivity() != null
+            && getContext().checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            getActivity().requestPermissions(new String[]{android.Manifest.permission.POST_NOTIFICATIONS}, 4242);
+        }
+        call.resolve();
+    }
+
+    /** "wifi", "cellular", "other" or "none", and whether the connection is metered. */
+    @PluginMethod
+    public void networkType(PluginCall call) {
+        String type = "none";
+        boolean metered = false;
+        try {
+            ConnectivityManager manager = (ConnectivityManager) getContext().getSystemService(Context.CONNECTIVITY_SERVICE);
+            Network network = manager.getActiveNetwork();
+            NetworkCapabilities caps = network == null ? null : manager.getNetworkCapabilities(network);
+            if (caps != null) {
+                if (caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) || caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)) type = "wifi";
+                else if (caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)) type = "cellular";
+                else type = "other";
+                metered = !caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED);
+            }
+        } catch (Exception ignored) {}
+        JSObject ret = new JSObject();
+        ret.put("type", type);
+        ret.put("metered", metered);
+        call.resolve(ret);
+    }
+
+    /** Closes the app completely (used by the mobile-data warning). */
+    @PluginMethod
+    public void closeApp(PluginCall call) {
+        call.resolve();
+        if (getActivity() != null) getActivity().finishAffinity();
     }
 }

@@ -7,6 +7,7 @@ import { usePhotoAnalysis } from './usePhotoAnalysis.ts';
 import { usePhotoSelection } from './usePhotoSelection.ts';
 import { useProgressPersistence } from './useProgressPersistence.ts';
 import { useKeepScreenOn } from './useKeepScreenOn.ts';
+import { useBackgroundProgress } from './useBackgroundProgress.ts';
 import { findDuplicateGroups } from '../services/duplicateDetection.ts';
 import { revokePhotoURLs } from '../services/photoUrls.ts';
 
@@ -71,6 +72,7 @@ export const usePhotoManager = ({ userProfile, onProfileUpdate, filterLabel }: U
   }, [photos]);
 
   useKeepScreenOn(processingQueueCount > 0);
+  useBackgroundProgress(processingQueueCount);
 
   // --- Sub-hook for File System Logic ---
   const {
@@ -203,7 +205,7 @@ export const usePhotoManager = ({ userProfile, onProfileUpdate, filterLabel }: U
       setConfirmDeleteState({ isOpen: true, photosToDelete: photos });
     } else {
       // No saved photos in selection, ask for simple confirmation
-      if (skipConfirm || window.confirm(`Are you sure you want to permanently delete ${photos.length} photo(s)? This action cannot be undone.`)) {
+      if (skipConfirm || window.confirm(`Supprimer définitivement ${photos.length} photo(s) ? Cette action est irréversible.`)) {
         handleDeletePhotos(photos);
       }
     }
