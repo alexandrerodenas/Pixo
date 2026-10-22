@@ -193,7 +193,7 @@ export const useFileSystem = (
       // A phone scan sees every photo: forget the ones that are gone.
       if (isPhone) pruneProgress(new Set(scanned.map(p => p.id))).catch(console.warn);
 
-      setPhotos(new Map(restored.map(p => [p.id, p]))); // Add all photos at once for initial render
+      setPhotos(new Map(restored.map(p => [p.id, p.status === PhotoStatus.QUEUED ? p : { ...p, fromPreviousSession: true }]))); // Add all photos at once for initial render
       // The usePhotoAnalysis hook will pick up the 'QUEUED' photos.
 
     } catch (error) {

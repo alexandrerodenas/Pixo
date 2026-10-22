@@ -9,6 +9,7 @@ import { isPhoneLibrary } from '../services/phoneLibrary.ts';
 import { t } from '../services/i18n.ts';
 import {
   FolderOpen,
+  Check,
   ArrowDown,
   EyeOff,
   Filter,
@@ -36,6 +37,7 @@ interface PhotoContentProps {
   viewMode: 'grid' | 'folder' | 'zen';
   setViewMode: (mode: 'grid' | 'folder' | 'zen') => void;
   savedFolderName: string;
+  newPhotosOnly: boolean;
 }
 
 const PhotoContent: React.FC<PhotoContentProps> = ({
@@ -56,11 +58,26 @@ const PhotoContent: React.FC<PhotoContentProps> = ({
                                                      onMoveSavedPhotos,
                                                      viewMode,
                                                      setViewMode,
-                                                     savedFolderName
+                                                     savedFolderName,
+                                                     newPhotosOnly
                                                    }) => {
+
+  // "New photos only" mode: the photos analysed in a previous session stay hidden until asked for,
+  // except while searching (a search looks at everything)
+  const [showPrevious, setShowPrevious] = useState(false);
+  const hidingPrevious = newPhotosOnly && !showPrevious && filterLabel.trim() === '';
+  const previousCount = useMemo(() => {
+    let count = 0;
+    for (const photo of photos.values()) if (photo.fromPreviousSession) count++;
+    return count;
+  }, [photos]);
 
   const photosToShow = useMemo(() => {
     let photosToReturn = photos;
+    if (hidingPrevious) {
+      photosToReturn = new Map();
+      for (const [id, photo] of photos.entries()) if (!photo.fromPreviousSession) photosToReturn.set(id, photo);
+    }
 
     if (isolateDuplicates) {
       const isolatedMap = new Map<string, Photo>();
@@ -103,7 +120,7 @@ const PhotoContent: React.FC<PhotoContentProps> = ({
     }
 
     return photosToReturn;
-  }, [photos, isolateSelection, isolateSaved, isolateDuplicates, isolateBlurry]);
+  }, [photos, hidingPrevious, isolateSelection, isolateSaved, isolateDuplicates, isolateBlurry]);
 
   const filteredPhotosForGrid = useMemo(() => {
     const photosArray = Array.from(photosToShow.values());
@@ -144,7 +161,7 @@ const PhotoContent: React.FC<PhotoContentProps> = ({
       );
     }
 
-    if (photosToShow.size === 0) {
+    if (photosToShow.size === 0 && !(hidingPrevious && previousCount > 0)) {
       let title = "Aucune photo correspondante";
       let message = "Aucune photo ne correspond aux critères. Essaie de modifier ta recherche.";
       let Icon = Filter;
@@ -175,6 +192,16 @@ const PhotoContent: React.FC<PhotoContentProps> = ({
             <p className="mt-2 max-w-sm">{message}</p>
           </div>
       )
+    }
+
+    if (photosToShow.size === 0) {
+      return (
+          <div className="flex flex-col items-center justify-center h-full text-center text-gray-500 dark:text-gray-400">
+            <Check className="w-24 h-24 mb-4 text-gray-300 dark:text-gray-600" />
+            <h2 className="text-2xl font-semibold">Aucune nouvelle photo</h2>
+            <p className="mt-2 max-w-sm">Toutes tes photos ont déjà été analysées lors d'une ouverture précédente.</p>
+          </div>
+      );
     }
 
     if (viewMode === 'grid') {
@@ -263,6 +290,16 @@ const PhotoContent: React.FC<PhotoContentProps> = ({
             </div>
         )}
         {renderContent()}
+        {hidingPrevious && previousCount > 0 && viewMode !== 'zen' && (
+            <div className="flex justify-center py-6">
+              <button
+                  onClick={() => setShowPrevious(true)}
+                  className="px-4 py-2 rounded-lg bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-sm font-semibold hover:opacity-90"
+              >
+                Charger les {previousCount} photos déjà analysées
+              </button>
+            </div>
+        )}
       </main>
   );
 };

@@ -75,6 +75,17 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ profile, setProfil
         </div>
 
         <div>
+          <label className="block font-semibold mb-1">À l'ouverture</label>
+          <select value={profile.startupView || 'all'} onChange={e => handleInputChange('startupView', e.target.value)} className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary">
+            <option value="all">Afficher toutes les photos</option>
+            <option value="new">Seulement les nouvelles photos</option>
+          </select>
+          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            En mode « nouvelles photos », les photos déjà analysées lors d'une ouverture précédente sont masquées. Un bouton en fin de liste permet de les charger.
+          </p>
+        </div>
+
+        <div>
           <label className="block text-sm font-medium mb-1">Modèle de reconnaissance (expérimental)</label>
           <select value={profile.classifier || 'mobilenet'} onChange={e => handleInputChange('classifier', e.target.value)} className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary">
             <option value="mobilenet">MobileNet (léger, par défaut)</option>

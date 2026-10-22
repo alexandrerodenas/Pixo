@@ -148,6 +148,7 @@ const PhotoSorter: React.FC<PhotoSorterProps> = ({ userProfile, onProfileUpdate 
             viewMode={viewMode}
             setViewMode={setViewMode}
             savedFolderName={userProfile.savedFolderName || 'saves'}
+            newPhotosOnly={userProfile.startupView === 'new'}
         />
 
         {/* Floating HUD (Stats & Status) */}
