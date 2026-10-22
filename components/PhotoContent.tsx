@@ -1,5 +1,5 @@
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef, useState, useLayoutEffect } from 'react';
 import type { Photo, ThumbnailSize } from '../services/types.ts';
 import { PhotoStatus } from '../services/types.ts';
 import PhotoGrid from './PhotoGrid.tsx';
@@ -9,6 +9,7 @@ import { isPhoneLibrary } from '../services/phoneLibrary.ts';
 import { t } from '../services/i18n.ts';
 import {
   FolderOpen,
+  ArrowDown,
   EyeOff,
   Filter,
   Heart,
@@ -205,8 +206,62 @@ const PhotoContent: React.FC<PhotoContentProps> = ({
     return <FolderView photos={photosToShow} onSelectPhoto={onSelectPhoto} onViewPhoto={onViewPhoto} thumbnailSize={thumbnailSize} onFilterChange={onFilterChange} onToggleSave={onToggleSavePhoto} onRequestDelete={onRequestDelete} onBulkSave={onBulkSave} />;
   }
 
+  // Position of the global list, remembered while a text search replaces it
+  const mainRef = useRef<HTMLElement>(null);
+  const savedScroll = useRef(0);
+  const searching = filterLabel.trim() !== '';
+  const searchingRef = useRef(searching);
+  searchingRef.current = searching;
+
+  useLayoutEffect(() => {
+    if (!searching && mainRef.current) mainRef.current.scrollTop = savedScroll.current;
+  }, [searching]);
+
+  const handleScroll = (e: React.UIEvent<HTMLElement>) => {
+    if (!searchingRef.current) savedScroll.current = e.currentTarget.scrollTop;
+  };
+
+  // Pull down from the top, like a reload: forget the saved position and start over
+  const PULL_THRESHOLD = 90;
+  const pullStart = useRef<number | null>(null);
+  const [pull, setPull] = useState(0);
+
+  const handleTouchStart = (e: React.TouchEvent<HTMLElement>) => {
+    pullStart.current = e.currentTarget.scrollTop <= 0 ? e.touches[0].clientY : null;
+  };
+  const handleTouchMove = (e: React.TouchEvent<HTMLElement>) => {
+    if (pullStart.current === null) return;
+    if (e.currentTarget.scrollTop > 0) { pullStart.current = null; setPull(0); return; }
+    setPull(Math.max(0, e.touches[0].clientY - pullStart.current));
+  };
+  const handleTouchEnd = () => {
+    if (pullStart.current !== null && pull >= PULL_THRESHOLD) {
+      savedScroll.current = 0;
+      if (mainRef.current) mainRef.current.scrollTop = 0;
+    }
+    pullStart.current = null;
+    setPull(0);
+  };
+
   return (
-      <main className="flex-1 p-6 overflow-y-auto">
+      <main
+          ref={mainRef}
+          className="flex-1 p-6 overflow-y-auto relative"
+          onScroll={handleScroll}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+          onTouchCancel={handleTouchEnd}
+      >
+        {pull > 10 && (
+            <div
+                className="pointer-events-none absolute left-1/2 top-2 z-10 -translate-x-1/2 flex items-center gap-1 rounded-full bg-gray-900/80 px-3 py-1 text-xs text-white"
+                style={{ opacity: Math.min(1, pull / PULL_THRESHOLD) }}
+            >
+              <ArrowDown className={`w-3 h-3 transition-transform ${pull >= PULL_THRESHOLD ? 'rotate-180' : ''}`} />
+              {pull >= PULL_THRESHOLD ? 'Relâcher pour repartir du début' : 'Tirer pour repartir du début'}
+            </div>
+        )}
         {renderContent()}
       </main>
   );
