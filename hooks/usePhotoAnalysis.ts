@@ -193,6 +193,20 @@ export const usePhotoAnalysis = (
     }
   }, [analyzePhoto]);
 
+  /** Puts every finished photo back in the queue so it is analysed again with the current profile. Returns how many. */
+  const reanalyzeAll = useCallback((): number => {
+    let count = 0;
+    const next = new Map(photosRef.current);
+    for (const [id, photo] of next) {
+      if (photo.status !== PhotoStatus.ANALYZED && photo.status !== PhotoStatus.UNCATEGORIZED && photo.status !== PhotoStatus.ERROR) continue;
+      enqueuedRef.current.delete(photo.objectURL);
+      next.set(id, { ...photo, status: PhotoStatus.QUEUED, matchedRules: undefined, customLabel: undefined });
+      count++;
+    }
+    if (count > 0) setPhotos(next);
+    return count;
+  }, [setPhotos]);
+
   // Queue newly loaded photos
   useEffect(() => {
     let added = false;
@@ -212,5 +226,5 @@ export const usePhotoAnalysis = (
     if (backend) setTfBackend(backend);
   }, [photos, tfBackend]);
 
-  return { tfBackend, modelsLoadState };
+  return { tfBackend, modelsLoadState, reanalyzeAll };
 };

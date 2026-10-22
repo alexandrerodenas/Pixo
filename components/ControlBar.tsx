@@ -19,7 +19,7 @@ import {
   LayoutGrid,
   FolderTree,
   Sparkles,
-  MoreHorizontal, Smartphone } from 'lucide-react';
+  MoreHorizontal, Smartphone, RefreshCw } from 'lucide-react';
 import { Spinner } from './ui.tsx';
 import AutocompleteInput from './AutocompleteInput.tsx';
 import { isPhoneLibrary } from '../services/phoneLibrary.ts';
@@ -36,6 +36,7 @@ interface ControlBarProps {
   onSelectAll: () => void;
   onClearSelection: () => void;
   onApplyRules: () => void;
+  onReanalyze: () => void;
   onDeleteSelected: () => void;
   selectedPhotoCount: number;
   noAnalyzedPhotos: boolean;
@@ -69,6 +70,7 @@ const ControlBar: React.FC<ControlBarProps> = ({
                                                  onSelectAll,
                                                  onClearSelection,
                                                  onApplyRules,
+                                                 onReanalyze,
                                                  onDeleteSelected,
                                                  selectedPhotoCount,
                                                  noAnalyzedPhotos,
@@ -224,6 +226,7 @@ const ControlBar: React.FC<ControlBarProps> = ({
           {/* Magic / AI Tools */}
           <div className="flex gap-1 shrink-0">
             <IconButton onClick={onApplyRules} disabled={noAnalyzedPhotos} icon={<Zap className="w-5 h-5" />} title="Appliquer les règles" className="text-yellow-600 dark:text-yellow-400 hover:bg-yellow-100 dark:hover:bg-yellow-900/30" />
+            <IconButton onClick={onReanalyze} disabled={noAnalyzedPhotos} icon={<RefreshCw className="w-5 h-5" />} title="Relancer l'analyse avec les réglages du profil" />
             <IconButton onClick={onCreateRuleFromSelection} disabled={selectedPhotoCount === 0} icon={<Wand2 className="w-5 h-5" />} title="Créer une règle depuis la sélection" className="text-purple-600 dark:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-900/30" />
             <IconButton onClick={onFindDuplicates} disabled={noAnalyzedPhotos} icon={<Copy className="w-5 h-5" />} title="Trouver les doublons" className="text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/30" />
           </div>
@@ -335,6 +338,7 @@ const ControlBar: React.FC<ControlBarProps> = ({
                 <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 px-1 mb-1 block">Outils IA</label>
                 <div className="flex gap-1 mb-3 flex-wrap">
                   <IconButton onClick={() => { onApplyRules(); setMobileMenuOpen(false); }} disabled={noAnalyzedPhotos} icon={<Zap className="w-5 h-5" />} title="Appliquer les règles" className="text-yellow-600 dark:text-yellow-400" />
+                  <IconButton onClick={() => { onReanalyze(); setMobileMenuOpen(false); }} disabled={noAnalyzedPhotos} icon={<RefreshCw className="w-5 h-5" />} title="Relancer l'analyse avec les réglages du profil" />
                   <IconButton onClick={() => { onCreateRuleFromSelection(); setMobileMenuOpen(false); }} disabled={selectedPhotoCount === 0} icon={<Wand2 className="w-5 h-5" />} title="Règle auto" className="text-purple-600 dark:text-purple-400" />
                   <IconButton onClick={() => { onFindDuplicates(); setMobileMenuOpen(false); }} disabled={noAnalyzedPhotos} icon={<Copy className="w-5 h-5" />} title="Doublons" className="text-indigo-600 dark:text-indigo-400" />
                 </div>

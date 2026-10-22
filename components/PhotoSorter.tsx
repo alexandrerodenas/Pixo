@@ -34,6 +34,7 @@ const PhotoSorter: React.FC<PhotoSorterProps> = ({ userProfile, onProfileUpdate 
     selectedPhotos,
     handleRequestDelete,
     handleApplyRulesManually,
+    handleReanalyze,
     handleSelectAll,
     handleClearSelection,
     isolateSelection,
@@ -89,6 +90,7 @@ const PhotoSorter: React.FC<PhotoSorterProps> = ({ userProfile, onProfileUpdate 
             onSelectAll={handleSelectAll}
             onClearSelection={handleClearSelection}
             onApplyRules={handleApplyRulesManually}
+            onReanalyze={handleReanalyze}
             onDeleteSelected={() => handleRequestDelete()}
             selectedPhotoCount={selectedPhotos.length}
             noAnalyzedPhotos={noAnalyzedPhotos}

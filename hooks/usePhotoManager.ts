@@ -100,6 +100,7 @@ export const usePhotoManager = ({ userProfile, onProfileUpdate, filterLabel }: U
   const {
     tfBackend,
     modelsLoadState,
+    reanalyzeAll,
   } = usePhotoAnalysis(photos, setPhotos, userProfileRef, applyRules);
 
   // --- Derived State ---
@@ -251,6 +252,17 @@ export const usePhotoManager = ({ userProfile, onProfileUpdate, filterLabel }: U
     }
     clearSelectionFiltered(photosToClear);
   }, [selectedPhotos, filterLabel, clearSelectionFiltered]);
+
+  const handleReanalyze = useCallback(() => {
+    const total = Array.from(photos.values()).filter(p => p.status === PhotoStatus.ANALYZED || p.status === PhotoStatus.UNCATEGORIZED || p.status === PhotoStatus.ERROR).length;
+    if (total === 0) {
+      setStatusMessage("Aucune photo analysée à relancer.");
+      return;
+    }
+    if (!window.confirm(`Relancer l'analyse de ${total} photo(s) avec les réglages actuels du profil ? Tes sélections et tes favoris sont conservés.`)) return;
+    const count = reanalyzeAll();
+    setStatusMessage(`Nouvelle analyse de ${count} photo(s) en cours.`);
+  }, [photos, reanalyzeAll, setStatusMessage]);
 
   const handleApplyRulesManually = useCallback(() => {
     const photosToProcess = Array.from(photos.values()).filter(p => p.status === PhotoStatus.ANALYZED);
@@ -480,6 +492,7 @@ export const usePhotoManager = ({ userProfile, onProfileUpdate, filterLabel }: U
     savedPhotos,
     handleRequestDelete,
     handleApplyRulesManually,
+    handleReanalyze,
     handleSelectAll,
     handleClearSelection,
     tfBackend,
