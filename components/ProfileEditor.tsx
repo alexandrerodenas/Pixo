@@ -159,7 +159,7 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ profile, setProfil
             If all AI **classification** scores for a photo are below this threshold, it will be classified as 'Uncategorized'. This helps filter out ambiguous images.
           </p>
           <div>
-            <label className="block text-sm font-medium mb-1">Confidence Threshold ({profile.unknownThreshold}%)</label>
+            <label className="block text-sm font-medium mb-1">Seuil de confiance ({profile.unknownThreshold}%)</label>
             <input
                 type="range"
                 min="0"

@@ -114,7 +114,7 @@ export const RulesManager: React.FC<RulesManagerProps> = ({ profile, setProfile,
                   {editingRuleId === rule.id ? (
                       <div className="p-3 bg-gray-200 dark:bg-gray-900 rounded-lg space-y-3 ring-2 ring-primary">
                         <div>
-                          <label className="block text-sm font-medium mb-1">Confidence ({editRuleData.confidence}%)</label>
+                          <label className="block text-sm font-medium mb-1">Confiance ({editRuleData.confidence}%)</label>
                           <input type="range" min="1" max="100" value={editRuleData.confidence} onChange={e => setEditRuleData({...editRuleData, confidence: parseInt(e.target.value)})} className="w-full h-2 bg-gray-300 dark:bg-gray-600 rounded-lg appearance-none cursor-pointer disabled:cursor-not-allowed" disabled={editRuleData.anyConfidence}/>
                         </div>
                         <label className="flex items-center gap-2 cursor-pointer text-sm font-medium">
@@ -162,14 +162,14 @@ export const RulesManager: React.FC<RulesManagerProps> = ({ profile, setProfile,
               <div>
                 <label className="block text-sm font-medium mb-1">Libellé</label>
                 <AutocompleteInput
-                    placeholder="e.g., beach, forest"
+                    placeholder="ex. : plage, forêt"
                     value={newClassificationRule.label}
                     onChange={val => setNewClassificationRule({...newClassificationRule, label: val})}
                     suggestions={allAvailableClassificationLabels}
                 />
               </div>
               <div className={`transition-opacity ${isClassificationAnyConfidence ? 'opacity-50' : ''}`}>
-                <label className="block text-sm font-medium mb-1">Confidence ({newClassificationRule.confidence}%)</label>
+                <label className="block text-sm font-medium mb-1">Confiance ({newClassificationRule.confidence}%)</label>
                 <input type="range" min="1" max="100" value={newClassificationRule.confidence} onChange={e => setNewClassificationRule({...newClassificationRule, confidence: parseInt(e.target.value)})} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-600 disabled:cursor-not-allowed" disabled={isClassificationAnyConfidence}/>
               </div>
             </div>
@@ -179,8 +179,8 @@ export const RulesManager: React.FC<RulesManagerProps> = ({ profile, setProfile,
                 <span>Quel que soit le score</span>
               </label>
             </div>
-            <button onClick={() => handleAddRule('classification')} className="mt-4 flex items-center gap-2 px-4 py-2 bg-primary text-white font-semibold rounded-md hover:bg-primary-dark transition text-sm">
-              <PlusCircle className="w-4 h-4"/> Add Classification Rule
+            <button onClick={() => handleAddRule('classification')} className="mt-4 w-full sm:w-auto justify-center flex items-center gap-2 px-4 py-2.5 bg-primary text-white font-semibold rounded-md hover:bg-primary-dark transition text-sm">
+              <PlusCircle className="w-4 h-4"/> Ajouter la règle de classification
             </button>
           </div>
         </div>
@@ -195,7 +195,7 @@ export const RulesManager: React.FC<RulesManagerProps> = ({ profile, setProfile,
                   {editingRuleId === rule.id ? (
                       <div className="p-3 bg-gray-200 dark:bg-gray-900 rounded-lg space-y-3 ring-2 ring-accent">
                         <div>
-                          <label className="block text-sm font-medium mb-1">Confidence ({editRuleData.confidence}%)</label>
+                          <label className="block text-sm font-medium mb-1">Confiance ({editRuleData.confidence}%)</label>
                           <input type="range" min="1" max="100" value={editRuleData.confidence} onChange={e => setEditRuleData({...editRuleData, confidence: parseInt(e.target.value)})} className="w-full h-2 bg-gray-300 dark:bg-gray-600 rounded-lg appearance-none cursor-pointer disabled:cursor-not-allowed" disabled={editRuleData.anyConfidence}/>
                         </div>
                         <label className="flex items-center gap-2 cursor-pointer text-sm font-medium">
@@ -243,14 +243,14 @@ export const RulesManager: React.FC<RulesManagerProps> = ({ profile, setProfile,
               <div>
                 <label className="block text-sm font-medium mb-1">Nom de l'objet</label>
                 <AutocompleteInput
-                    placeholder="e.g., person, car, dog"
+                    placeholder="ex. : personne, voiture, chien"
                     value={newDetectionRule.label}
                     onChange={val => setNewDetectionRule({...newDetectionRule, label: val})}
                     suggestions={allAvailableDetectionLabels}
                 />
               </div>
               <div className={`transition-opacity ${isDetectionAnyConfidence ? 'opacity-50' : ''}`}>
-                <label className="block text-sm font-medium mb-1">Confidence ({newDetectionRule.confidence}%)</label>
+                <label className="block text-sm font-medium mb-1">Confiance ({newDetectionRule.confidence}%)</label>
                 <input type="range" min="1" max="100" value={newDetectionRule.confidence} onChange={e => setNewDetectionRule({...newDetectionRule, confidence: parseInt(e.target.value)})} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-600 disabled:cursor-not-allowed" disabled={isDetectionAnyConfidence}/>
               </div>
             </div>
@@ -260,8 +260,8 @@ export const RulesManager: React.FC<RulesManagerProps> = ({ profile, setProfile,
                 <span>Quel que soit le score</span>
               </label>
             </div>
-            <button onClick={() => handleAddRule('detection')} className="mt-4 flex items-center gap-2 px-4 py-2 bg-accent text-white font-semibold rounded-md hover:bg-accent-dark transition text-sm">
-              <PlusCircle className="w-4 h-4"/> Add Detection Rule
+            <button onClick={() => handleAddRule('detection')} className="mt-4 w-full sm:w-auto justify-center flex items-center gap-2 px-4 py-2.5 bg-accent text-white font-semibold rounded-md hover:bg-accent-dark transition text-sm">
+              <PlusCircle className="w-4 h-4"/> Ajouter la règle de détection
             </button>
           </div>
         </div>
