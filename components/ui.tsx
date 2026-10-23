@@ -2,14 +2,14 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { PhotoStatus } from '../services/types.ts';
-import { Loader, Check, AlertCircle, HelpCircle } from 'lucide-react';
+import { Loader, Check, AlertCircle, HelpCircle, Sparkles } from 'lucide-react';
 import { t } from '../services/i18n.ts';
 
 export const Spinner: React.FC<{ className?: string }> = ({ className = "w-6 h-6" }) => (
     <Loader className={`${className} animate-spin text-primary`} />
 );
 
-export const StatusPill: React.FC<{ status: PhotoStatus }> = ({ status }) => {
+export const StatusPill: React.FC<{ status: PhotoStatus; isNew?: boolean }> = ({ status, isNew }) => {
     const statusInfo = {
         [PhotoStatus.QUEUED]: { text: t('status.queued'), icon: <Loader className="w-3 h-3" />, color: 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200' },
         [PhotoStatus.ANALYZING]: { text: t('status.analyzing'), icon: <Spinner className="w-3 h-3" />, color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300' },
@@ -17,7 +17,9 @@ export const StatusPill: React.FC<{ status: PhotoStatus }> = ({ status }) => {
         [PhotoStatus.UNCATEGORIZED]: { text: t('status.uncategorized'), icon: <HelpCircle className="w-3 h-3" />, color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300' },
         [PhotoStatus.ERROR]: { text: t('status.error'), icon: <AlertCircle className="w-3 h-3" />, color: 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300' },
     };
-    const info = statusInfo[status as keyof typeof statusInfo];
+    const info = isNew
+        ? { text: t('new.badge'), icon: <Sparkles className="w-3 h-3" />, color: 'bg-blue-500 text-white' }
+        : statusInfo[status as keyof typeof statusInfo];
     if (!info) return null;
 
     const { text, icon, color } = info;

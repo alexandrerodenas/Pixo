@@ -65,7 +65,7 @@ export const usePhotoManager = ({ userProfile, onProfileUpdate, filterLabel }: U
   const processingQueueCount = useMemo(() => {
     let count = 0;
     for (const photo of photos.values()) {
-      if (photo.status === PhotoStatus.QUEUED || photo.status === PhotoStatus.ANALYZING) {
+      if (!photo.awaitingApproval && (photo.status === PhotoStatus.QUEUED || photo.status === PhotoStatus.ANALYZING)) {
         count++;
       }
     }
@@ -104,6 +104,7 @@ export const usePhotoManager = ({ userProfile, onProfileUpdate, filterLabel }: U
     tfBackend,
     modelsLoadState,
     reanalyzeAll,
+    startNewPhotosAnalysis,
   } = usePhotoAnalysis(photos, setPhotos, userProfileRef, applyRules);
 
   // --- Derived State ---
@@ -266,6 +267,11 @@ export const usePhotoManager = ({ userProfile, onProfileUpdate, filterLabel }: U
     const count = reanalyzeAll();
     setStatusMessage(t('pm.reanalyzing', { count }));
   }, [photos, reanalyzeAll, setStatusMessage]);
+
+  const handleAnalyzeNew = useCallback((applyRules: boolean) => {
+    const count = startNewPhotosAnalysis(applyRules);
+    if (count > 0) setStatusMessage(t('new.started', { count }));
+  }, [startNewPhotosAnalysis, setStatusMessage]);
 
   const handleApplyRulesManually = useCallback(() => {
     const photosToProcess = Array.from(photos.values()).filter(p => p.status === PhotoStatus.ANALYZED);
@@ -496,6 +502,7 @@ export const usePhotoManager = ({ userProfile, onProfileUpdate, filterLabel }: U
     handleRequestDelete,
     handleApplyRulesManually,
     handleReanalyze,
+    handleAnalyzeNew,
     handleSelectAll,
     handleClearSelection,
     tfBackend,

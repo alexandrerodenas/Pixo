@@ -152,7 +152,7 @@ function PhotoCard({ photo, onSelect, onView, onFilterChange, onToggleSave, onDe
                   <div className="absolute inset-0 border-4 border-accent rounded-lg pointer-events-none"></div>
               )}
 
-              <StatusPill status={photo.status} />
+              <StatusPill status={photo.status} isNew={photo.awaitingApproval} />
 
               <div className="absolute top-2 right-2 flex items-center gap-2 z-10">
                 <button

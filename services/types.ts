@@ -22,6 +22,8 @@ export interface Photo {
   selected: boolean;
   isSaved?: boolean;
   source?: { size: number; lastModified: number }; // the file as scanned, to match saved progress
+  awaitingApproval?: boolean; // new photo found at opening: waits for the user to start its analysis
+  applyRulesWhenAnalyzed?: boolean; // the user asked to apply the rules once it is analyzed
   fromPreviousSession?: boolean; // restored from saved progress: analysed before this opening
   customLabel?: string;
 

@@ -10,6 +10,7 @@ import { t } from '../services/i18n.ts';
 import {
   FolderOpen,
   Check,
+  Sparkles,
   ArrowDown,
   EyeOff,
   Filter,
@@ -38,6 +39,7 @@ interface PhotoContentProps {
   setViewMode: (mode: 'grid' | 'folder' | 'zen') => void;
   savedFolderName: string;
   newPhotosOnly: boolean;
+  onAnalyzeNew: (applyRules: boolean) => void;
 }
 
 const PhotoContent: React.FC<PhotoContentProps> = ({
@@ -59,7 +61,8 @@ const PhotoContent: React.FC<PhotoContentProps> = ({
                                                      viewMode,
                                                      setViewMode,
                                                      savedFolderName,
-                                                     newPhotosOnly
+                                                     newPhotosOnly,
+                                                     onAnalyzeNew
                                                    }) => {
 
   // "New photos only" mode: the photos analysed in a previous session stay hidden until asked for,
@@ -131,8 +134,9 @@ const PhotoContent: React.FC<PhotoContentProps> = ({
       return photosArray;
     }
 
-    // First, filter out unprocessed photos
-    const processedPhotos = photosArray.filter(p => p.status !== PhotoStatus.QUEUED && p.status !== PhotoStatus.ANALYZING);
+    // Photos still being analysed are left out; the new photos waiting for the user's go are shown first
+    const processedPhotos = photosArray.filter(p => p.awaitingApproval || (p.status !== PhotoStatus.QUEUED && p.status !== PhotoStatus.ANALYZING));
+    if (processedPhotos.some(p => p.awaitingApproval)) processedPhotos.sort((a, b) => Number(!!b.awaitingApproval) - Number(!!a.awaitingApproval));
 
     if (!filterLabel.trim()) {
       return processedPhotos; // Return all processed if no filter
@@ -233,6 +237,12 @@ const PhotoContent: React.FC<PhotoContentProps> = ({
     return <FolderView photos={photosToShow} onSelectPhoto={onSelectPhoto} onViewPhoto={onViewPhoto} thumbnailSize={thumbnailSize} onFilterChange={onFilterChange} onToggleSave={onToggleSavePhoto} onRequestDelete={onRequestDelete} onBulkSave={onBulkSave} />;
   }
 
+  const awaitingCount = useMemo(() => {
+    let count = 0;
+    for (const photo of photos.values()) if (photo.awaitingApproval) count++;
+    return count;
+  }, [photos]);
+
   // Position of the global list, remembered while a text search replaces it
   const mainRef = useRef<HTMLElement>(null);
   const savedScroll = useRef(0);
@@ -287,6 +297,27 @@ const PhotoContent: React.FC<PhotoContentProps> = ({
             >
               <ArrowDown className={`w-3 h-3 transition-transform ${pull >= PULL_THRESHOLD ? 'rotate-180' : ''}`} />
               {pull >= PULL_THRESHOLD ? t('content.release') : t('content.pull')}
+            </div>
+        )}
+        {awaitingCount > 0 && viewMode !== 'zen' && (
+            <div className="sticky top-0 z-20 -mx-6 -mt-6 mb-6 px-4 py-3 bg-blue-600 text-white shadow-md">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 max-w-4xl mx-auto">
+                <div className="flex items-start gap-2 flex-1 min-w-0">
+                  <Sparkles className="w-5 h-5 shrink-0 mt-0.5" />
+                  <div className="min-w-0">
+                    <p className="font-semibold text-sm">{t('new.title', { count: awaitingCount })}</p>
+                    <p className="text-xs text-blue-100">{t('new.hint')}</p>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={() => onAnalyzeNew(true)} className="flex-1 sm:flex-none px-3 py-2 rounded-lg bg-white text-blue-700 text-sm font-semibold hover:bg-blue-50 transition">
+                    {t('new.analyzeRules')}
+                  </button>
+                  <button onClick={() => onAnalyzeNew(false)} className="flex-1 sm:flex-none px-3 py-2 rounded-lg bg-blue-700 text-white text-sm font-semibold hover:bg-blue-800 transition">
+                    {t('new.analyze')}
+                  </button>
+                </div>
+              </div>
             </div>
         )}
         {renderContent()}

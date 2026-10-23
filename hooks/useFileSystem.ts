@@ -193,7 +193,9 @@ export const useFileSystem = (
       // A phone scan sees every photo: forget the ones that are gone.
       if (isPhone) pruneProgress(new Set(scanned.map(p => p.id))).catch(console.warn);
 
-      setPhotos(new Map(restored.map(p => [p.id, p.status === PhotoStatus.QUEUED ? p : { ...p, fromPreviousSession: true }]))); // Add all photos at once for initial render
+      // Coming back to a library already analysed: the new photos are shown and wait for the user's go
+      const returning = restored.some(p => p.status !== PhotoStatus.QUEUED);
+      setPhotos(new Map(restored.map(p => [p.id, p.status === PhotoStatus.QUEUED ? (returning ? { ...p, awaitingApproval: true } : p) : { ...p, fromPreviousSession: true }]))); // Add all photos at once for initial render
       // The usePhotoAnalysis hook will pick up the 'QUEUED' photos.
 
     } catch (error) {
@@ -398,11 +400,16 @@ export const useFileSystem = (
   // This effect is to manage the global loading state based on analysis progress.
   // It's a bit of a grey area, but FileSystem is the "entry point" for loading.
   useEffect(() => {
-    const photoArray = Array.from(photos.values());
+    const all = Array.from(photos.values());
+    const photoArray = all.filter(p => !p.awaitingApproval);
+    const waiting = all.length - photoArray.length;
     const total = photoArray.length;
     const processed = photoArray.filter(p => p.status !== PhotoStatus.QUEUED && p.status !== PhotoStatus.ANALYZING).length;
 
-    if (total > 0 && processed === total && isLoading) {
+    if (waiting > 0 && processed === total && isLoading) {
+      setIsLoading(false);
+      setStatusMessage(t('new.waiting', { count: waiting }));
+    } else if (total > 0 && processed === total && isLoading) {
       setIsLoading(false);
       setStatusMessage(t('analysis.done', { count: total }));
     } else if (isLoading && total > 0) {
