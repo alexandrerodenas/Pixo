@@ -5,11 +5,14 @@ import PhotoSorter from './components/PhotoSorter.tsx';
 import Onboarding from './components/Onboarding.tsx';
 import { storageService } from './services/storage.ts';
 import WelcomeModal from './components/WelcomeModal.tsx';
+import { setLanguage, t } from './services/i18n.ts';
+import { useLanguage } from './hooks/useLanguage.ts';
 
 const App: React.FC = () => {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isWelcomeModalOpen, setWelcomeModalOpen] = useState(false);
+  useLanguage(); // re-render the whole app when the language changes
 
   useEffect(() => {
     let loadedProfile = storageService.loadUserProfile();
@@ -60,6 +63,10 @@ const App: React.FC = () => {
     }
   }, []);
 
+  useEffect(() => {
+    if (userProfile) setLanguage(userProfile.language);
+  }, [userProfile?.language]);
+
   const handleProfileUpdate = useCallback((profile: UserProfile) => {
     const isFirstTime = !userProfile;
     storageService.saveUserProfile(profile);
@@ -80,7 +87,7 @@ const App: React.FC = () => {
   if (isLoading) {
     return (
         <div className="flex items-center justify-center h-screen bg-gray-100 dark:bg-gray-900 text-gray-600 dark:text-gray-300">
-          <p className="text-xl animate-pulse">Chargement de ton espace... ✨</p>
+          <p className="text-xl animate-pulse">{t('app.loading')}</p>
         </div>
     );
   }

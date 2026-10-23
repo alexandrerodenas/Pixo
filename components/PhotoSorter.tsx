@@ -12,6 +12,7 @@ import PhotoViewerModal from './PhotoViewerModal.tsx';
 import ProfileSettingsModal from './ProfileSettingsModal.tsx';
 import ConfirmDeleteModal from './ConfirmDeleteModal.tsx';
 import DataWarningModal from './DataWarningModal.tsx';
+import { t } from '../services/i18n.ts';
 
 interface PhotoSorterProps {
   userProfile: UserProfile;
@@ -41,6 +42,7 @@ const PhotoSorter: React.FC<PhotoSorterProps> = ({ userProfile, onProfileUpdate 
     handleRequestDelete,
     handleApplyRulesManually,
     handleReanalyze,
+    handleAnalyzeNew,
     handleSelectAll,
     handleClearSelection,
     isolateSelection,
@@ -89,7 +91,7 @@ const PhotoSorter: React.FC<PhotoSorterProps> = ({ userProfile, onProfileUpdate 
       <div className="relative h-screen flex flex-col overflow-hidden bg-gray-100 dark:bg-gray-900">
         {!isApiSupported && (
             <div className="bg-red-500 text-white text-sm font-medium px-4 py-2 text-center w-full shadow-md z-50">
-              ⚠️ Your browser does not support the File System Access API. Pixo cannot access local folders directly. Please use a Chromium-based browser (Chrome, Edge, Brave).
+              {t('sorter.noApi')}
             </div>
         )}
 
@@ -149,6 +151,7 @@ const PhotoSorter: React.FC<PhotoSorterProps> = ({ userProfile, onProfileUpdate 
             setViewMode={setViewMode}
             savedFolderName={userProfile.savedFolderName || 'saves'}
             newPhotosOnly={userProfile.startupView === 'new'}
+            onAnalyzeNew={handleAnalyzeNew}
         />
 
         {/* Floating HUD (Stats & Status) */}

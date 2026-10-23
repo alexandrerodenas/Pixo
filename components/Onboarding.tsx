@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import type { UserProfile } from '../services/types.ts';
 import { Zap, Bot, ShieldCheck, SlidersHorizontal } from 'lucide-react';
 import { guessOwnerFirstName } from '../services/phoneLibrary.ts';
+import { t } from '../services/i18n.ts';
 
 interface OnboardingProps {
   onProfileSave: (profile: UserProfile) => void;
@@ -61,45 +62,45 @@ const Onboarding: React.FC<OnboardingProps> = ({ onProfileSave }) => {
           {/* Hero Section */}
           <div className="max-w-4xl mx-auto mb-16">
             <div className="flex justify-center items-center mb-6">
-              <img src="/logo.png" alt="Logo Pixo" className="w-24 h-24" />
+              <img src="/logo.png" alt={t('onb.logoAlt')} className="w-24 h-24" />
             </div>
             <h1 className="text-4xl md:text-6xl font-bold text-primary dark:text-primary-light mb-4 leading-tight">
-              Welcome to Pixo
+              {t('onb.title')}
             </h1>
             <p className="text-lg md:text-xl text-gray-600 dark:text-gray-300 mb-12">
-              Organize your photos effortlessly.
+              {t('onb.tagline1')}
               <br/>
-              Automatically categorize your local photos with powerful AI, right in your browser.
+              {t('onb.tagline2')}
               <br/>
-              No uploads, total privacy.
+              {t('onb.tagline3')}
             </p>
           </div>
 
           {/* Features Section */}
           <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto mb-20">
-            <FeatureCard icon={<Bot className="w-10 h-10" />} title="Automatic Tagging">
-              Leverage state-of-the-art AI to scan and label your photos based on their content.
+            <FeatureCard icon={<Bot className="w-10 h-10" />} title={t('onb.f1.title')}>
+              {t('onb.f1.body')}
             </FeatureCard>
-            <FeatureCard icon={<ShieldCheck className="w-10 h-10" />} title="100% Private">
-              Your photos are processed entirely on your device. Nothing is ever uploaded to a server.
+            <FeatureCard icon={<ShieldCheck className="w-10 h-10" />} title={t('onb.f2.title')}>
+              {t('onb.f2.body')}
             </FeatureCard>
-            <FeatureCard icon={<SlidersHorizontal className="w-10 h-10" />} title="Powerful Rules">
-              Create custom rules to automatically select photos that match your criteria for easy organization.
+            <FeatureCard icon={<SlidersHorizontal className="w-10 h-10" />} title={t('onb.f3.title')}>
+              {t('onb.f3.body')}
             </FeatureCard>
           </div>
 
           {/* Call to Action Section */}
           <div className="max-w-md mx-auto bg-white dark:bg-gray-800/50 p-8 rounded-xl shadow-2xl ring-1 ring-primary/20">
-            <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-4">Ready to Get Started?</h2>
+            <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-4">{t('onb.cta.title')}</h2>
             <p className="text-gray-600 dark:text-gray-300 mb-6">
-              Let's begin by setting up your profile. What should I call you?
+              {t('onb.cta.body')}
             </p>
             <form onSubmit={handleSubmit} className="flex flex-col gap-4">
               <input
                   type="text"
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
-                  placeholder="Enter your first name..."
+                  placeholder={t('onb.placeholder')}
                   className="w-full px-4 py-3 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:outline-none transition"
                   required
               />
@@ -107,14 +108,14 @@ const Onboarding: React.FC<OnboardingProps> = ({ onProfileSave }) => {
                   type="submit"
                   className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary-dark text-white font-bold py-3 px-4 rounded-lg transition-transform transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-light"
               >
-                Start Organizing <Zap className="w-5 h-5" />
+                {t('onb.start')} <Zap className="w-5 h-5" />
               </button>
             </form>
           </div>
         </main>
 
         <footer className="text-center py-8 text-sm text-gray-500">
-          <p>Powered by Alexandre Rodenas</p>
+          <p>{t('onb.footer')}</p>
         </footer>
       </div>
   );

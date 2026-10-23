@@ -5,6 +5,8 @@ import { PhotoStatus } from '../services/types.ts';
 import { StatusPill } from './ui.tsx';
 import PhotoActionMenu from './PhotoActionMenu.tsx';
 import { Check, Tag, Boxes, Heart, Bookmark, AlertTriangle } from 'lucide-react';
+import { t } from '../services/i18n.ts';
+import { useLanguage } from '../hooks/useLanguage.ts';
 
 interface PhotoCardProps {
   photo: Photo;
@@ -19,6 +21,7 @@ const LONG_PRESS_MS = 500;
 const LONG_PRESS_MOVE_PX = 10;
 
 function PhotoCard({ photo, onSelect, onView, onFilterChange, onToggleSave, onDelete }: PhotoCardProps) {
+  useLanguage(); // this component is memoized: re-render it when the language changes
   const clickTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
   const [isVisible, setIsVisible] = useState(false);
@@ -149,13 +152,13 @@ function PhotoCard({ photo, onSelect, onView, onFilterChange, onToggleSave, onDe
                   <div className="absolute inset-0 border-4 border-accent rounded-lg pointer-events-none"></div>
               )}
 
-              <StatusPill status={photo.status} />
+              <StatusPill status={photo.status} isNew={photo.awaitingApproval} />
 
               <div className="absolute top-2 right-2 flex items-center gap-2 z-10">
                 <button
                     onClick={(e) => { e.stopPropagation(); onToggleSave(photo.id); }}
                     className="p-1.5 bg-black/40 rounded-full text-white hover:text-red-400 transition-colors"
-                    title={photo.isSaved ? "Unsave photo" : "Save for later"}
+                    title={photo.isSaved ? t('card.unsave') : t('card.save')}
                 >
                   <Heart className={`w-4 h-4 transition-all ${photo.isSaved ? 'fill-red-400' : 'fill-transparent'}`} />
                 </button>
@@ -169,7 +172,7 @@ function PhotoCard({ photo, onSelect, onView, onFilterChange, onToggleSave, onDe
               {/* Blur Indicator */}
               {photo.blurLevel === 'blurry' && (
                   <div className="absolute bottom-12 right-2 z-10">
-                    <div className="bg-orange-500/90 text-white p-1 rounded-full shadow-sm" title={`Blur Detected (Score: ${photo.blurScore})`}>
+                    <div className="bg-orange-500/90 text-white p-1 rounded-full shadow-sm" title={t('card.blur', { score: photo.blurScore ?? 0 })}>
                       <AlertTriangle className="w-3 h-3" />
                     </div>
                   </div>
@@ -183,7 +186,7 @@ function PhotoCard({ photo, onSelect, onView, onFilterChange, onToggleSave, onDe
                         <button
                             onClick={(e) => handleLabelClick(e, photo.customLabel!)}
                             className="flex items-center gap-1.5 overflow-hidden text-left hover:underline focus:outline-none focus:underline"
-                            title={`Filter by custom label "${photo.customLabel}"`}
+                            title={t('card.filterCustom', { label: photo.customLabel })}
                         >
                           <Bookmark className="w-3 h-3 text-secondary shrink-0" />
                           <span className="text-sm font-bold capitalize truncate">
@@ -196,7 +199,7 @@ function PhotoCard({ photo, onSelect, onView, onFilterChange, onToggleSave, onDe
                         <button
                             onClick={(e) => handleLabelClick(e, topDetection.label)}
                             className="flex items-center gap-1.5 overflow-hidden text-left hover:underline focus:outline-none focus:underline"
-                            title={`Filter by "${topDetection.label}"`}
+                            title={t('card.filter', { label: topDetection.label })}
                         >
                           <Boxes className="w-3 h-3 text-white/90 shrink-0" />
                           <span className="text-sm font-bold capitalize truncate">
@@ -212,7 +215,7 @@ function PhotoCard({ photo, onSelect, onView, onFilterChange, onToggleSave, onDe
                         <button
                             onClick={(e) => handleLabelClick(e, topClassification.label)}
                             className="flex items-center gap-1.5 overflow-hidden text-left hover:underline focus:outline-none focus:underline"
-                            title={`Filter by "${topClassification.label}"`}
+                            title={t('card.filter', { label: topClassification.label })}
                         >
                           <Tag className="w-3 h-3 text-white/90 shrink-0" />
                           <span className="text-sm font-bold capitalize truncate">

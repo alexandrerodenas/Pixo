@@ -10,6 +10,7 @@ import { t } from '../services/i18n.ts';
 import {
   FolderOpen,
   Check,
+  Sparkles,
   ArrowDown,
   EyeOff,
   Filter,
@@ -38,6 +39,7 @@ interface PhotoContentProps {
   setViewMode: (mode: 'grid' | 'folder' | 'zen') => void;
   savedFolderName: string;
   newPhotosOnly: boolean;
+  onAnalyzeNew: (applyRules: boolean) => void;
 }
 
 const PhotoContent: React.FC<PhotoContentProps> = ({
@@ -59,7 +61,8 @@ const PhotoContent: React.FC<PhotoContentProps> = ({
                                                      viewMode,
                                                      setViewMode,
                                                      savedFolderName,
-                                                     newPhotosOnly
+                                                     newPhotosOnly,
+                                                     onAnalyzeNew
                                                    }) => {
 
   // "New photos only" mode: the photos analysed in a previous session stay hidden until asked for,
@@ -131,8 +134,9 @@ const PhotoContent: React.FC<PhotoContentProps> = ({
       return photosArray;
     }
 
-    // First, filter out unprocessed photos
-    const processedPhotos = photosArray.filter(p => p.status !== PhotoStatus.QUEUED && p.status !== PhotoStatus.ANALYZING);
+    // Photos still being analysed are left out; the new photos waiting for the user's go are shown first
+    const processedPhotos = photosArray.filter(p => p.awaitingApproval || (p.status !== PhotoStatus.QUEUED && p.status !== PhotoStatus.ANALYZING));
+    if (processedPhotos.some(p => p.awaitingApproval)) processedPhotos.sort((a, b) => Number(!!b.awaitingApproval) - Number(!!a.awaitingApproval));
 
     if (!filterLabel.trim()) {
       return processedPhotos; // Return all processed if no filter
@@ -162,25 +166,25 @@ const PhotoContent: React.FC<PhotoContentProps> = ({
     }
 
     if (photosToShow.size === 0 && !(hidingPrevious && previousCount > 0)) {
-      let title = "Aucune photo correspondante";
-      let message = "Aucune photo ne correspond aux critères. Essaie de modifier ta recherche.";
+      let title = t('content.none.title');
+      let message = t('content.none.body');
       let Icon = Filter;
 
       if (isolateDuplicates) {
-        title = "Aucun doublon trouvé";
-        message = "Bonne nouvelle ! Aucun doublon dans cette sélection.";
+        title = t('content.dup.title');
+        message = t('content.dup.body');
         Icon = Copy;
       } else if (isolateSelection) {
-        title = "Aucune photo sélectionnée";
-        message = "You're in isolation mode, but no photos are selected. Clear the isolation to see all photos.";
+        title = t('content.sel.title');
+        message = t('content.sel.body');
         Icon = EyeOff;
       } else if (isolateSaved) {
-        title = "Aucune photo gardée";
-        message = "You're in isolation mode, but no photos are saved. Click the heart on photos to save them.";
+        title = t('content.saved.title');
+        message = t('content.saved.body');
         Icon = Heart;
       } else if (isolateBlurry) {
-        title = "Aucune photo floue";
-        message = "Excellent! All your photos appear to be sharp.";
+        title = t('content.blur.title');
+        message = t('content.blur.body');
         Icon = AlertTriangle;
       }
 
@@ -198,8 +202,8 @@ const PhotoContent: React.FC<PhotoContentProps> = ({
       return (
           <div className="flex flex-col items-center justify-center h-full text-center text-gray-500 dark:text-gray-400">
             <Check className="w-24 h-24 mb-4 text-gray-300 dark:text-gray-600" />
-            <h2 className="text-2xl font-semibold">Aucune nouvelle photo</h2>
-            <p className="mt-2 max-w-sm">Toutes tes photos ont déjà été analysées lors d'une ouverture précédente.</p>
+            <h2 className="text-2xl font-semibold">{t('content.noNew.title')}</h2>
+            <p className="mt-2 max-w-sm">{t('content.noNew.body')}</p>
           </div>
       );
     }
@@ -209,8 +213,8 @@ const PhotoContent: React.FC<PhotoContentProps> = ({
         return (
             <div className="flex flex-col items-center justify-center h-full text-center text-gray-500 dark:text-gray-400">
               <Filter className="w-24 h-24 mb-4 text-gray-300 dark:text-gray-600" />
-              <h2 className="text-2xl font-semibold">Aucune photo correspondante</h2>
-              <p className="mt-2 max-w-sm">Aucune photo ne correspond à ton filtre. Essaie un autre terme.</p>
+              <h2 className="text-2xl font-semibold">{t('content.none.title')}</h2>
+              <p className="mt-2 max-w-sm">{t('content.filter.body')}</p>
             </div>
         );
       }
@@ -232,6 +236,12 @@ const PhotoContent: React.FC<PhotoContentProps> = ({
 
     return <FolderView photos={photosToShow} onSelectPhoto={onSelectPhoto} onViewPhoto={onViewPhoto} thumbnailSize={thumbnailSize} onFilterChange={onFilterChange} onToggleSave={onToggleSavePhoto} onRequestDelete={onRequestDelete} onBulkSave={onBulkSave} />;
   }
+
+  const awaitingCount = useMemo(() => {
+    let count = 0;
+    for (const photo of photos.values()) if (photo.awaitingApproval) count++;
+    return count;
+  }, [photos]);
 
   // Position of the global list, remembered while a text search replaces it
   const mainRef = useRef<HTMLElement>(null);
@@ -286,7 +296,28 @@ const PhotoContent: React.FC<PhotoContentProps> = ({
                 style={{ opacity: Math.min(1, pull / PULL_THRESHOLD) }}
             >
               <ArrowDown className={`w-3 h-3 transition-transform ${pull >= PULL_THRESHOLD ? 'rotate-180' : ''}`} />
-              {pull >= PULL_THRESHOLD ? 'Relâcher pour repartir du début' : 'Tirer pour repartir du début'}
+              {pull >= PULL_THRESHOLD ? t('content.release') : t('content.pull')}
+            </div>
+        )}
+        {awaitingCount > 0 && viewMode !== 'zen' && (
+            <div className="sticky top-0 z-20 -mx-6 -mt-6 mb-6 px-4 py-3 bg-blue-600 text-white shadow-md">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 max-w-4xl mx-auto">
+                <div className="flex items-start gap-2 flex-1 min-w-0">
+                  <Sparkles className="w-5 h-5 shrink-0 mt-0.5" />
+                  <div className="min-w-0">
+                    <p className="font-semibold text-sm">{t('new.title', { count: awaitingCount })}</p>
+                    <p className="text-xs text-blue-100">{t('new.hint')}</p>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={() => onAnalyzeNew(true)} className="flex-1 sm:flex-none px-3 py-2 rounded-lg bg-white text-blue-700 text-sm font-semibold hover:bg-blue-50 transition">
+                    {t('new.analyzeRules')}
+                  </button>
+                  <button onClick={() => onAnalyzeNew(false)} className="flex-1 sm:flex-none px-3 py-2 rounded-lg bg-blue-700 text-white text-sm font-semibold hover:bg-blue-800 transition">
+                    {t('new.analyze')}
+                  </button>
+                </div>
+              </div>
             </div>
         )}
         {renderContent()}
@@ -296,7 +327,7 @@ const PhotoContent: React.FC<PhotoContentProps> = ({
                   onClick={() => setShowPrevious(true)}
                   className="px-4 py-2 rounded-lg bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-sm font-semibold hover:opacity-90"
               >
-                Charger les {previousCount} photos déjà analysées
+                {t('content.loadPrevious', { count: previousCount })}
               </button>
             </div>
         )}

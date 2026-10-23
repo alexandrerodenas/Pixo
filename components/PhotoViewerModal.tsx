@@ -5,6 +5,7 @@ import { PhotoStatus } from '../services/types.ts';
 import { Spinner } from './ui.tsx';
 import ZoomableImage from './ZoomableImage.tsx';
 import { X, Bot, Boxes, Wand2, Focus, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { t } from '../services/i18n.ts';
 
 interface PhotoViewerModalProps {
   photo: Photo | null;
@@ -38,7 +39,7 @@ const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({ photo, onClose }) =
       <div className="fixed inset-0 bg-black/70 z-40 flex items-center justify-center" onClick={onClose}>
         <div className="relative w-full max-w-4xl max-h-[90vh] bg-white dark:bg-gray-800 rounded-lg shadow-2xl flex flex-col md:flex-row" onClick={e => e.stopPropagation()}>
           <div className="md:w-2/3 shrink-0 bg-black/90 rounded-t-lg md:rounded-tr-none md:rounded-l-lg overflow-hidden">
-            <ZoomableImage src={photo.objectURL} alt="Vue agrandie" className="w-full h-[50vh] md:h-[85vh]" />
+            <ZoomableImage src={photo.objectURL} alt={t('viewer.alt')} className="w-full h-[50vh] md:h-[85vh]" />
           </div>
           <div className="md:w-1/3 p-4 md:p-6 flex flex-col overflow-y-auto min-h-0 flex-1">
             <button onClick={onClose} className="absolute top-3 right-3 p-1.5 bg-gray-200/50 dark:bg-gray-700/50 rounded-full hover:bg-red-500 hover:text-white transition">
@@ -47,24 +48,24 @@ const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({ photo, onClose }) =
             {isAnalysisPending ? (
                 <div className="flex flex-col items-center justify-center h-full text-gray-500">
                   <Spinner className="w-10 h-10 mb-2"/>
-                  <p>Analyse en cours...</p>
+                  <p>{t('viewer.pending')}</p>
                 </div>
             ) : (
                 <div className="space-y-6">
                   {hasMatchedRules && (
                       <div className="p-3 bg-green-50 dark:bg-green-900/30 border-l-4 border-green-500 rounded-r-md">
                         <h3 className="text-lg font-bold mb-2 flex items-center gap-2 text-green-700 dark:text-green-300">
-                          <Wand2 className="w-5 h-5"/> Matched Rules
+                          <Wand2 className="w-5 h-5"/> {t('viewer.rules')}
                         </h3>
                         <ul className="space-y-1 text-sm list-disc list-inside text-gray-700 dark:text-gray-300">
                           {photo.matchedRules!.classification?.map(ruleLabel => (
                               <li key={`c-rule-${ruleLabel}`}>
-                                Classification: <span className="font-semibold capitalize">{ruleLabel}</span>
+                                {t('viewer.ruleClass')} <span className="font-semibold capitalize">{ruleLabel}</span>
                               </li>
                           ))}
                           {photo.matchedRules!.detection?.map(ruleLabel => (
                               <li key={`d-rule-${ruleLabel}`}>
-                                Detection: <span className="font-semibold capitalize">{ruleLabel}</span>
+                                {t('viewer.ruleDetect')} <span className="font-semibold capitalize">{ruleLabel}</span>
                               </li>
                           ))}
                         </ul>
@@ -75,10 +76,10 @@ const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({ photo, onClose }) =
                       <div className="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
                         <div className="flex justify-between items-center mb-2">
                           <h3 className="font-bold flex items-center gap-2">
-                            <Focus className="w-5 h-5 text-secondary" /> Sharpness Score
+                            <Focus className="w-5 h-5 text-secondary" /> {t('viewer.sharpness')}
                           </h3>
                           <span className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider ${getBlurColor(photo.blurLevel)}`}>
-                                    {getBlurIcon(photo.blurLevel)} {photo.blurLevel}
+                                    {getBlurIcon(photo.blurLevel)} {photo.blurLevel ? t(`blur.${photo.blurLevel}`) : ''}
                                 </span>
                         </div>
                         <div className="relative pt-1">
@@ -98,7 +99,7 @@ const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({ photo, onClose }) =
                   )}
 
                   <div>
-                    <h3 className="text-lg font-bold mb-3 flex items-center gap-2"><Bot className="w-5 h-5 text-secondary" /> Classifications IA</h3>
+                    <h3 className="text-lg font-bold mb-3 flex items-center gap-2"><Bot className="w-5 h-5 text-secondary" /> {t('viewer.classifications')}</h3>
                     <ul className="space-y-3">
                       {photo.classifications.length > 0 ? photo.classifications.map((p, i) => (
                           <li key={`class-${i}`} className="text-sm">
@@ -110,12 +111,12 @@ const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({ photo, onClose }) =
                               <div className="bg-primary h-1.5 rounded-full" style={{width: `${p.score * 100}%`}}></div>
                             </div>
                           </li>
-                      )) : <p className="text-gray-500 text-sm">Aucune classification trouvée.</p>}
+                      )) : <p className="text-gray-500 text-sm">{t('viewer.noClass')}</p>}
                     </ul>
                   </div>
 
                   <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-                    <h3 className="text-lg font-bold mb-3 flex items-center gap-2"><Boxes className="w-5 h-5 text-secondary" /> Objets détectés</h3>
+                    <h3 className="text-lg font-bold mb-3 flex items-center gap-2"><Boxes className="w-5 h-5 text-secondary" /> {t('viewer.objects')}</h3>
                     <ul className="space-y-3">
                       {photo.detections.length > 0 ? photo.detections.map((p, i) => (
                           <li key={`detect-${i}`} className="text-sm">
@@ -127,7 +128,7 @@ const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({ photo, onClose }) =
                               <div className="bg-accent h-1.5 rounded-full" style={{width: `${p.score * 100}%`}}></div>
                             </div>
                           </li>
-                      )) : <p className="text-gray-500 text-sm">Aucun objet détecté.</p>}
+                      )) : <p className="text-gray-500 text-sm">{t('viewer.noObjects')}</p>}
                     </ul>
                   </div>
                 </div>

@@ -95,7 +95,7 @@ export const useFileSystem = (
     if (phone.isPhoneLibrary()) return;
     if (!window.showDirectoryPicker) {
       setIsApiSupported(false);
-      setStatusMessage('Browser not supported. Use Chrome or Edge for directory access.');
+      setStatusMessage(t('fs.noApi'));
       console.warn("File System Access API (`showDirectoryPicker`) is not supported in this browser.");
     }
   }, [setStatusMessage]);
@@ -193,7 +193,9 @@ export const useFileSystem = (
       // A phone scan sees every photo: forget the ones that are gone.
       if (isPhone) pruneProgress(new Set(scanned.map(p => p.id))).catch(console.warn);
 
-      setPhotos(new Map(restored.map(p => [p.id, p.status === PhotoStatus.QUEUED ? p : { ...p, fromPreviousSession: true }]))); // Add all photos at once for initial render
+      // Coming back to a library already analysed: the new photos are shown and wait for the user's go
+      const returning = restored.some(p => p.status !== PhotoStatus.QUEUED);
+      setPhotos(new Map(restored.map(p => [p.id, p.status === PhotoStatus.QUEUED ? (returning ? { ...p, awaitingApproval: true } : p) : { ...p, fromPreviousSession: true }]))); // Add all photos at once for initial render
       // The usePhotoAnalysis hook will pick up the 'QUEUED' photos.
 
     } catch (error) {
@@ -273,8 +275,8 @@ export const useFileSystem = (
     if (savedPhotos.length === 0) return;
 
     if (phone.isPhoneLibrary()) {
-      if (!window.confirm(`This will ${operation} ${savedPhotos.length} photo(s) to Pictures/${savedFolderName}. Continue?`)) return;
-      setStatusMessage(`${operation === 'move' ? 'Moving' : 'Copying'} ${savedPhotos.length} photo(s)...`);
+      if (!window.confirm(t('fs.confirmPhone', { count: savedPhotos.length, op: t(operation === 'move' ? 'fs.opMoved' : 'fs.opCopied'), folder: savedFolderName }))) return;
+      setStatusMessage(t(operation === 'move' ? 'fs.moving' : 'fs.copying', { count: savedPhotos.length }));
       const done = await phone.transferPhotos(savedPhotos.map(p => p.id), savedFolderName, operation);
       if (operation === 'move') {
         setPhotos(prev => {
@@ -299,7 +301,7 @@ export const useFileSystem = (
 
     if (!directoryHandleRef.current) return;
 
-    if (!window.confirm(`This will ${operation} ${savedPhotos.length} photo(s) to a new directory. This action is permanent. Continue?`)) {
+    if (!window.confirm(t('fs.confirmFolder', { count: savedPhotos.length, op: t(operation === 'move' ? 'fs.opMoved' : 'fs.opCopied') }))) {
       return;
     }
 
@@ -310,16 +312,16 @@ export const useFileSystem = (
       });
     } catch (error) {
       if ((error as DOMException).name === 'AbortError') {
-        setStatusMessage('Destination selection cancelled.');
+        setStatusMessage(t('fs.destCancelled'));
       } else {
-        setStatusMessage('Could not open destination directory.');
+        setStatusMessage(t('fs.destFailed'));
         console.error(error);
       }
       return;
     }
 
     try {
-      setStatusMessage(`Preparing to ${operation} files...`);
+      setStatusMessage(t(operation === 'move' ? 'fs.preparingMove' : 'fs.preparingCopy'));
       const targetSubDir = await destDirHandle.getDirectoryHandle(savedFolderName, { create: true });
 
       const processedPhotoIds: string[] = [];
@@ -327,7 +329,7 @@ export const useFileSystem = (
       const reservedNames = new Set<string>();
 
       for (const photo of savedPhotos) {
-        setStatusMessage(`${operation === 'move' ? 'Moving' : 'Copying'} ${photo.id}...`);
+        setStatusMessage(t(operation === 'move' ? 'fs.movingOne' : 'fs.copyingOne', { name: photo.id }));
         const sourceHandle = directoryHandleRef.current;
         const sourceFileHandle = await getFileHandleByPath(sourceHandle, photo.id);
 
@@ -390,7 +392,7 @@ export const useFileSystem = (
       }
 
     } catch(err) {
-      setStatusMessage(`An error occurred during the ${operation} operation.`);
+      setStatusMessage(t(operation === 'move' ? 'fs.errorMove' : 'fs.errorCopy'));
       console.error(err);
     }
   }, [directoryHandleRef, setPhotos, setStatusMessage]);
@@ -398,11 +400,16 @@ export const useFileSystem = (
   // This effect is to manage the global loading state based on analysis progress.
   // It's a bit of a grey area, but FileSystem is the "entry point" for loading.
   useEffect(() => {
-    const photoArray = Array.from(photos.values());
+    const all = Array.from(photos.values());
+    const photoArray = all.filter(p => !p.awaitingApproval);
+    const waiting = all.length - photoArray.length;
     const total = photoArray.length;
     const processed = photoArray.filter(p => p.status !== PhotoStatus.QUEUED && p.status !== PhotoStatus.ANALYZING).length;
 
-    if (total > 0 && processed === total && isLoading) {
+    if (waiting > 0 && processed === total && isLoading) {
+      setIsLoading(false);
+      setStatusMessage(t('new.waiting', { count: waiting }));
+    } else if (total > 0 && processed === total && isLoading) {
       setIsLoading(false);
       setStatusMessage(t('analysis.done', { count: total }));
     } else if (isLoading && total > 0) {
