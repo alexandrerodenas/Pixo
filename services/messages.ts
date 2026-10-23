@@ -333,4 +333,13 @@ export const messages = {
   'sel.cleared': { fr: 'Sélection effacée pour {count} photo(s).', en: 'Cleared selection of {count} photo(s).' },
   'ac.clear': { fr: 'Effacer le filtre', en: 'Clear the filter' },
   'zen.back': { fr: 'Retour à la grille', en: 'Back to the grid' },
+  'hud.clipDownload': { fr: 'CLIP : téléchargement du modèle {percent} %', en: 'CLIP: downloading the model {percent}%' },
+  'hud.clipLabels': { fr: 'CLIP : préparation des libellés {percent} % (une seule fois)', en: 'CLIP: preparing the labels {percent}% (one time only)' },
+  'hud.clipError': { fr: 'CLIP indisponible, MobileNet est utilisé', en: 'CLIP unavailable, using MobileNet' },
+  'hud.expand': { fr: 'Afficher les statistiques', en: 'Show stats' },
+  'hud.collapse': { fr: 'Masquer les statistiques', en: 'Hide stats' },
+  'hud.progress': { fr: '{done} / {total} analysées', en: '{done} / {total} analyzed' },
+  'hud.photos': { fr: 'Photos', en: 'Photos' },
+  'hud.selected': { fr: 'Sélectionnées', en: 'Selected' },
+  'hud.kept': { fr: 'Gardées', en: 'Kept' },
 } as const;
