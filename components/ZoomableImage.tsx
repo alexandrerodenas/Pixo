@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
+import { t } from '../services/i18n.ts';
 
 interface ZoomableImageProps {
   src: string;
@@ -174,10 +175,10 @@ const ZoomableImage: React.FC<ZoomableImageProps> = ({ src, alt, className = '' 
         style={{ transform: `translate(${view.x}px, ${view.y}px) scale(${view.scale})` }}
       />
       <div className="absolute bottom-3 left-3 flex items-center gap-1 rounded-full bg-black/50 p-1 text-white" onPointerDown={e => e.stopPropagation()}>
-        <button onClick={() => zoomBy(1 / BUTTON_STEP)} disabled={!zoomed} aria-label="Zoom arrière" className="p-1.5 rounded-full hover:bg-white/20 disabled:opacity-30"><ZoomOut className="w-4 h-4" /></button>
-        <button onClick={() => zoomBy(BUTTON_STEP)} disabled={view.scale >= MAX_SCALE} aria-label="Zoom avant" className="p-1.5 rounded-full hover:bg-white/20 disabled:opacity-30"><ZoomIn className="w-4 h-4" /></button>
+        <button onClick={() => zoomBy(1 / BUTTON_STEP)} disabled={!zoomed} aria-label={t('zoom.out')} className="p-1.5 rounded-full hover:bg-white/20 disabled:opacity-30"><ZoomOut className="w-4 h-4" /></button>
+        <button onClick={() => zoomBy(BUTTON_STEP)} disabled={view.scale >= MAX_SCALE} aria-label={t('zoom.in')} className="p-1.5 rounded-full hover:bg-white/20 disabled:opacity-30"><ZoomIn className="w-4 h-4" /></button>
         {zoomed && (
-          <button onClick={() => setView(IDENTITY)} aria-label="Réinitialiser le zoom" className="p-1.5 rounded-full hover:bg-white/20"><RotateCcw className="w-4 h-4" /></button>
+          <button onClick={() => setView(IDENTITY)} aria-label={t('zoom.reset')} className="p-1.5 rounded-full hover:bg-white/20"><RotateCcw className="w-4 h-4" /></button>
         )}
       </div>
     </div>

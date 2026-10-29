@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import type { Photo } from '../services/types.ts';
+import { t } from '../services/i18n.ts';
 
 
 export const usePhotoSelection = (
@@ -45,9 +46,9 @@ export const usePhotoSelection = (
   const selectAllFiltered = useCallback((photosToSelect: Photo[], options?: { isManualApplication?: boolean }) => {
     if (photosToSelect.length === 0) {
       if (options?.isManualApplication) {
-        setStatusMessage("Aucune photo ne correspond à tes règles. ✨");
+        setStatusMessage(t('sel.noneRules'));
       } else {
-        setStatusMessage("Aucune photo ne correspond aux critères pour la sélection.");
+        setStatusMessage(t('sel.noneCriteria'));
       }
       return;
     }
@@ -66,19 +67,15 @@ export const usePhotoSelection = (
     });
 
     if (newlySelectedCount > 0) {
-      const s = newlySelectedCount === 1 ? '' : 's';
-      const context = options?.isManualApplication ? 'based on your rules' : '';
-      setStatusMessage(`Selected ${newlySelectedCount} new photo${s} ${context}.`);
+      setStatusMessage(t(options?.isManualApplication ? 'sel.selectedRules' : 'sel.selected', { count: newlySelectedCount }));
     } else {
-      const s = photosToSelect.length === 1 ? '' : 's';
-      const were = photosToSelect.length === 1 ? 'was' : 'were';
-      setStatusMessage(`All ${photosToSelect.length} matching photo${s} ${were} already selected.`);
+      setStatusMessage(t('sel.already', { count: photosToSelect.length }));
     }
   }, [setPhotos, setStatusMessage]);
 
   const clearSelectionFiltered = useCallback((photosToClear: Photo[]) => {
     if (photosToClear.length === 0) {
-      setStatusMessage("Aucune photo sélectionnée à effacer.");
+      setStatusMessage(t('sel.nothingToClear'));
       return;
     }
 
@@ -93,8 +90,7 @@ export const usePhotoSelection = (
       return newPhotos;
     });
 
-    const s = photosToClear.length === 1 ? '' : 's';
-    setStatusMessage(`Cleared selection of ${photosToClear.length} photo${s}.`);
+    setStatusMessage(t('sel.cleared', { count: photosToClear.length }));
   }, [setPhotos, setStatusMessage]);
 
   return {

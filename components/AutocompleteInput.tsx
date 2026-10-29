@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
+import { t } from '../services/i18n.ts';
 
 interface AutocompleteInputProps {
   value: string;
@@ -128,7 +129,7 @@ const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
                   type="button"
                   onClick={handleClear}
                   className="absolute right-3 p-1 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-full transition-colors"
-                  aria-label="Effacer le filtre"
+                  aria-label={t('ac.clear')}
               >
                 <X className="w-4 h-4" />
               </button>

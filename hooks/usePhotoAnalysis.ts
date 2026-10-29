@@ -163,7 +163,7 @@ export const usePhotoAnalysis = (
           customLabel: matchedCustomLabel,
           thumbnailURL,
         };
-        if (updatedPhoto.status === PhotoStatus.ANALYZED && userProfileRef.current?.autoApplyRules) {
+        if (updatedPhoto.status === PhotoStatus.ANALYZED && (userProfileRef.current?.autoApplyRules || currentPhoto.applyRulesWhenAnalyzed)) {
           const classificationMatches = applyRulesRef.current(updatedPhoto.classifications, userProfileRef.current.classificationRules);
           const detectionMatches = applyRulesRef.current(updatedPhoto.detections, userProfileRef.current.detectionRules);
           if (classificationMatches.length > 0 || detectionMatches.length > 0) {
@@ -200,7 +200,20 @@ export const usePhotoAnalysis = (
     for (const [id, photo] of next) {
       if (photo.status !== PhotoStatus.ANALYZED && photo.status !== PhotoStatus.UNCATEGORIZED && photo.status !== PhotoStatus.ERROR) continue;
       enqueuedRef.current.delete(photo.objectURL);
-      next.set(id, { ...photo, status: PhotoStatus.QUEUED, matchedRules: undefined, customLabel: undefined });
+      next.set(id, { ...photo, status: PhotoStatus.QUEUED, matchedRules: undefined, customLabel: undefined, applyRulesWhenAnalyzed: undefined });
+      count++;
+    }
+    if (count > 0) setPhotos(next);
+    return count;
+  }, [setPhotos]);
+
+  /** Lets the photos found at opening go into the queue, optionally applying the rules to them. Returns how many. */
+  const startNewPhotosAnalysis = useCallback((applyRulesToThem: boolean): number => {
+    let count = 0;
+    const next = new Map(photosRef.current);
+    for (const [id, photo] of next) {
+      if (!photo.awaitingApproval) continue;
+      next.set(id, { ...photo, awaitingApproval: false, applyRulesWhenAnalyzed: applyRulesToThem });
       count++;
     }
     if (count > 0) setPhotos(next);
@@ -211,7 +224,7 @@ export const usePhotoAnalysis = (
   useEffect(() => {
     let added = false;
     for (const photo of photos.values()) {
-      if (photo.status === PhotoStatus.QUEUED && !enqueuedRef.current.has(photo.objectURL)) {
+      if (photo.status === PhotoStatus.QUEUED && !photo.awaitingApproval && !enqueuedRef.current.has(photo.objectURL)) {
         enqueuedRef.current.add(photo.objectURL);
         queueRef.current.push(photo.id);
         added = true;
@@ -226,5 +239,5 @@ export const usePhotoAnalysis = (
     if (backend) setTfBackend(backend);
   }, [photos, tfBackend]);
 
-  return { tfBackend, modelsLoadState, reanalyzeAll };
+  return { tfBackend, modelsLoadState, reanalyzeAll, startNewPhotosAnalysis };
 };

@@ -12,6 +12,10 @@ export interface ClipStats {
   downloadedMB?: number;
   photos: number;
   avgMs?: number;
+  /** What the model is doing before the first photo: downloading it, then embedding the labels */
+  phase?: 'download' | 'labels';
+  progress?: number; // 0..1 within the phase
+  error?: string; // set when CLIP could not load: photos then keep their MobileNet labels
 }
 
 export type Classification = { label: string; score: number };
@@ -31,26 +35,60 @@ export function subscribeClipStats(listener: (s: ClipStats) => void): () => void
   return () => { listeners.delete(listener); };
 }
 
+// A failed load is not retried for every photo (each attempt would download the model again)
+const RETRY_AFTER_MS = 5 * 60 * 1000;
+const STALL_TIMEOUT_MS = 2 * 60 * 1000;
+let failedAt = 0;
+
 function start(): Promise<void> {
   if (ready) return ready;
-  ready = confirmModelDownload('clip', CLIP_SIZE_MB).then(createWorker);
-  ready.catch(() => { worker?.terminate(); worker = null; ready = null; });
+  if (failedAt && Date.now() - failedAt < RETRY_AFTER_MS) return Promise.reject(new Error(stats.error ?? 'CLIP unavailable'));
+  stats.phase = 'download';
+  stats.progress = 0;
+  stats.error = undefined;
+  publish();
+  ready = confirmModelDownload('clip', CLIP_SIZE_MB).then(allowed => {
+    if (!allowed) throw new Error('Download declined');
+    return createWorker();
+  });
+  ready.catch(error => {
+    worker?.terminate();
+    worker = null;
+    ready = null;
+    failedAt = Date.now();
+    stats.phase = undefined;
+    stats.error = error?.message || 'CLIP unavailable';
+    publish();
+  });
   return ready;
 }
 
 function createWorker(): Promise<void> {
   worker = new Worker(new URL('../workers/clip.worker.ts', import.meta.url), { type: 'module' });
   return new Promise<void>((resolve, reject) => {
+    // The worker reports progress all along (download, labels): silence means it is stuck
+    let watchdog: ReturnType<typeof setTimeout> | undefined;
+    const rearm = () => {
+      clearTimeout(watchdog);
+      watchdog = setTimeout(() => reject(new Error('CLIP model did not respond')), STALL_TIMEOUT_MS);
+    };
+    rearm();
     worker!.onmessage = (event: MessageEvent) => {
       const msg = event.data;
+      if (msg.type === 'initialized' || msg.type === 'error') clearTimeout(watchdog); else if (ready && !stats.loaded) rearm();
       if (msg.type === 'initialized') {
+        failedAt = 0;
         Object.assign(stats, {
-          loaded: true, device: msg.device, loadMs: msg.loadMs,
+          loaded: true, phase: undefined, progress: undefined, error: undefined, device: msg.device, loadMs: msg.loadMs,
           downloadedMB: Math.round(msg.downloadedBytes / 1e5) / 10,
         });
         publish();
         markModelsDownloaded('clip');
         resolve();
+      } else if (msg.type === 'progress') {
+        stats.phase = msg.phase;
+        stats.progress = msg.total > 0 ? Math.min(1, msg.done / msg.total) : 0;
+        publish();
       } else if (msg.type === 'result') {
         totalMs += msg.ms;
         stats.photos++;

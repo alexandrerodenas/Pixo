@@ -152,7 +152,7 @@ const ControlBar: React.FC<ControlBarProps> = ({
         <div className="flex-1 min-w-0 md:flex-none md:w-64 md:shrink-0 relative group z-50">
           <AutocompleteInput
               icon={<Search className="w-4 h-4" />}
-              placeholder="Rechercher un libellé..."
+              placeholder={t('bar.search')}
               value={filterLabel}
               onChange={onFilterChange}
               suggestions={allAvailableLabels}
@@ -162,7 +162,7 @@ const ControlBar: React.FC<ControlBarProps> = ({
               <button
                   onClick={() => onCreateRuleFromFilter(filterLabel)}
                   className="absolute right-9 top-1/2 -translate-y-1/2 p-1 text-blue-600 hover:bg-blue-100 rounded-full"
-                  title={`Create rule for "${trimmedFilterLabel}"`}
+                  title={t('bar.createRuleFor', { label: trimmedFilterLabel })}
               >
                 <PlusCircle className="w-4 h-4" />
               </button>
@@ -180,7 +180,7 @@ const ControlBar: React.FC<ControlBarProps> = ({
                 active={viewMode === 'grid'}
                 onClick={() => setViewMode('grid')}
                 icon={<LayoutGrid className="w-4 h-4" />}
-                title="Vue grille"
+                title={t('bar.viewGrid')}
                 activeClass="bg-white dark:bg-gray-600 shadow-sm text-primary"
                 inactiveClass="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
                 className="!p-1.5"
@@ -189,7 +189,7 @@ const ControlBar: React.FC<ControlBarProps> = ({
                 active={viewMode === 'folder'}
                 onClick={() => setViewMode('folder')}
                 icon={<FolderTree className="w-4 h-4" />}
-                title="Vue par dossiers"
+                title={t('bar.viewFolder')}
                 activeClass="bg-white dark:bg-gray-600 shadow-sm text-primary"
                 inactiveClass="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
                 className="!p-1.5"
@@ -198,7 +198,7 @@ const ControlBar: React.FC<ControlBarProps> = ({
                 active={viewMode === 'zen'}
                 onClick={() => setViewMode('zen')}
                 icon={<Sparkles className="w-4 h-4" />}
-                title="Mode Zen"
+                title={t('bar.zenMode')}
                 activeClass="bg-white dark:bg-gray-600 shadow-sm text-primary"
                 inactiveClass="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
                 className="!p-1.5"
@@ -209,14 +209,14 @@ const ControlBar: React.FC<ControlBarProps> = ({
 
           {/* Selection Tools */}
           <div className="flex gap-1 shrink-0">
-            <IconButton onClick={onSelectAll} disabled={noAnalyzedPhotos} icon={<CheckSquare className="w-5 h-5" />} title="Tout sélectionner" />
-            <IconButton onClick={onClearSelection} disabled={selectedPhotoCount === 0} icon={<XSquare className="w-5 h-5" />} title="Effacer la sélection" />
+            <IconButton onClick={onSelectAll} disabled={noAnalyzedPhotos} icon={<CheckSquare className="w-5 h-5" />} title={t('bar.selectAll')} />
+            <IconButton onClick={onClearSelection} disabled={selectedPhotoCount === 0} icon={<XSquare className="w-5 h-5" />} title={t('bar.clearSel')} />
             <IconButton
                 active={isolateSelection}
                 onClick={onToggleIsolateSelection}
                 disabled={selectedPhotoCount === 0 && !isolateSelection}
                 icon={isolateSelection ? <Eye className="w-5 h-5" /> : <EyeOff className="w-5 h-5" />}
-                title={isolateSelection ? "Tout afficher" : "Isoler la sélection"}
+                title={isolateSelection ? t('bar.showAll') : t('bar.isolateSel')}
                 activeClass="bg-blue-500 text-white"
             />
           </div>
@@ -225,10 +225,10 @@ const ControlBar: React.FC<ControlBarProps> = ({
 
           {/* Magic / AI Tools */}
           <div className="flex gap-1 shrink-0">
-            <IconButton onClick={onApplyRules} disabled={noAnalyzedPhotos} icon={<Zap className="w-5 h-5" />} title="Appliquer les règles" className="text-yellow-600 dark:text-yellow-400 hover:bg-yellow-100 dark:hover:bg-yellow-900/30" />
-            <IconButton onClick={onReanalyze} disabled={noAnalyzedPhotos} icon={<RefreshCw className="w-5 h-5" />} title="Relancer l'analyse avec les réglages du profil" />
-            <IconButton onClick={onCreateRuleFromSelection} disabled={selectedPhotoCount === 0} icon={<Wand2 className="w-5 h-5" />} title="Créer une règle depuis la sélection" className="text-purple-600 dark:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-900/30" />
-            <IconButton onClick={onFindDuplicates} disabled={noAnalyzedPhotos} icon={<Copy className="w-5 h-5" />} title="Trouver les doublons" className="text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/30" />
+            <IconButton onClick={onApplyRules} disabled={noAnalyzedPhotos} icon={<Zap className="w-5 h-5" />} title={t('bar.applyRules')} className="text-yellow-600 dark:text-yellow-400 hover:bg-yellow-100 dark:hover:bg-yellow-900/30" />
+            <IconButton onClick={onReanalyze} disabled={noAnalyzedPhotos} icon={<RefreshCw className="w-5 h-5" />} title={t('bar.reanalyze')} />
+            <IconButton onClick={onCreateRuleFromSelection} disabled={selectedPhotoCount === 0} icon={<Wand2 className="w-5 h-5" />} title={t('bar.ruleFromSel')} className="text-purple-600 dark:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-900/30" />
+            <IconButton onClick={onFindDuplicates} disabled={noAnalyzedPhotos} icon={<Copy className="w-5 h-5" />} title={t('bar.findDup')} className="text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/30" />
           </div>
 
           <Divider />
@@ -240,7 +240,7 @@ const ControlBar: React.FC<ControlBarProps> = ({
                 onClick={onToggleIsolateDuplicates}
                 disabled={!isolateDuplicates} // Keep enabled if active to toggle off
                 icon={<Copy className="w-5 h-5" />}
-                title="Afficher les doublons"
+                title={t('bar.showDup')}
                 activeClass="bg-indigo-500 text-white"
                 className={!isolateDuplicates ? "opacity-50 hover:opacity-100" : ""}
             />
@@ -249,7 +249,7 @@ const ControlBar: React.FC<ControlBarProps> = ({
                 onClick={onToggleIsolateBlurry}
                 disabled={blurryPhotoCount === 0 && !isolateBlurry}
                 icon={<AlertTriangle className="w-5 h-5" />}
-                title="Afficher les photos floues"
+                title={t('bar.showBlurry')}
                 activeClass="bg-orange-500 text-white"
                 className={!isolateBlurry ? "text-orange-600 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-900/30" : ""}
             />
@@ -258,7 +258,7 @@ const ControlBar: React.FC<ControlBarProps> = ({
                 onClick={onToggleIsolateSaved}
                 disabled={savedPhotoCount === 0 && !isolateSaved}
                 icon={<Heart className={`w-5 h-5 ${isolateSaved ? 'fill-current' : ''}`} />}
-                title="Afficher les photos gardées"
+                title={t('bar.showSaved')}
                 activeClass="bg-pink-500 text-white"
                 className={!isolateSaved ? "text-pink-600 dark:text-pink-400 hover:bg-pink-100 dark:hover:bg-pink-900/30" : ""}
             />
@@ -268,8 +268,8 @@ const ControlBar: React.FC<ControlBarProps> = ({
 
           {/* Destructive Actions */}
           <div className="flex gap-1 shrink-0">
-            <IconButton onClick={() => onMoveSavedPhotos()} disabled={savedPhotoCount === 0} icon={<Save className="w-5 h-5" />} title="Déplacer les photos gardées" className="text-green-600 dark:text-green-500 hover:bg-green-100 dark:hover:bg-green-900/30"/>
-            <IconButton onClick={onDeleteSelected} disabled={selectedPhotoCount === 0} icon={<Trash2 className="w-5 h-5" />} title="Supprimer la sélection" className="text-red-600 dark:text-red-500 hover:bg-red-100 dark:hover:bg-red-900/30"/>
+            <IconButton onClick={() => onMoveSavedPhotos()} disabled={savedPhotoCount === 0} icon={<Save className="w-5 h-5" />} title={t('bar.moveSaved')} className="text-green-600 dark:text-green-500 hover:bg-green-100 dark:hover:bg-green-900/30"/>
+            <IconButton onClick={onDeleteSelected} disabled={selectedPhotoCount === 0} icon={<Trash2 className="w-5 h-5" />} title={t('bar.deleteSel')} className="text-red-600 dark:text-red-500 hover:bg-red-100 dark:hover:bg-red-900/30"/>
           </div>
         </div>
 
@@ -279,7 +279,7 @@ const ControlBar: React.FC<ControlBarProps> = ({
           <button
               onClick={() => setMobileMenuOpen(!isMobileMenuOpen)}
               className={`p-2 rounded-lg transition-colors ${isMobileMenuOpen ? 'bg-gray-200 dark:bg-gray-600 text-primary' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
-              title="Plus d'actions"
+              title={t('bar.more')}
           >
             <MoreHorizontal className="w-5 h-5" />
           </button>
@@ -288,13 +288,13 @@ const ControlBar: React.FC<ControlBarProps> = ({
           {isMobileMenuOpen && (
               <div className="absolute top-full right-4 mt-2 w-72 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl z-50 p-3 max-h-[70vh] overflow-y-auto">
                 {/* View Modes */}
-                <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 px-1 mb-1 block">Affichage</label>
+                <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 px-1 mb-1 block">{t('bar.display')}</label>
                 <div className="flex bg-gray-100 dark:bg-gray-700/50 p-1 rounded-lg mb-3">
                   <IconButton
                       active={viewMode === 'grid'}
                       onClick={() => { setViewMode('grid'); setMobileMenuOpen(false); }}
                       icon={<LayoutGrid className="w-4 h-4" />}
-                      title="Grille"
+                      title={t('bar.grid')}
                       activeClass="bg-white dark:bg-gray-600 shadow-sm text-primary"
                       inactiveClass="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
                       className="!p-1.5 flex-1"
@@ -303,7 +303,7 @@ const ControlBar: React.FC<ControlBarProps> = ({
                       active={viewMode === 'folder'}
                       onClick={() => { setViewMode('folder'); setMobileMenuOpen(false); }}
                       icon={<FolderTree className="w-4 h-4" />}
-                      title="Dossiers"
+                      title={t('bar.folders')}
                       activeClass="bg-white dark:bg-gray-600 shadow-sm text-primary"
                       inactiveClass="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
                       className="!p-1.5 flex-1"
@@ -312,7 +312,7 @@ const ControlBar: React.FC<ControlBarProps> = ({
                       active={viewMode === 'zen'}
                       onClick={() => { setViewMode('zen'); setMobileMenuOpen(false); }}
                       icon={<Sparkles className="w-4 h-4" />}
-                      title="Zen"
+                      title={t('bar.zen')}
                       activeClass="bg-white dark:bg-gray-600 shadow-sm text-primary"
                       inactiveClass="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
                       className="!p-1.5 flex-1"
@@ -320,38 +320,38 @@ const ControlBar: React.FC<ControlBarProps> = ({
                 </div>
 
                 {/* Selection Tools */}
-                <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 px-1 mb-1 block">Sélection</label>
+                <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 px-1 mb-1 block">{t('bar.selection')}</label>
                 <div className="flex gap-1 mb-3 flex-wrap">
-                  <IconButton onClick={() => { onSelectAll(); setMobileMenuOpen(false); }} disabled={noAnalyzedPhotos} icon={<CheckSquare className="w-5 h-5" />} title="Tout sélectionner" />
-                  <IconButton onClick={() => { onClearSelection(); setMobileMenuOpen(false); }} disabled={selectedPhotoCount === 0} icon={<XSquare className="w-5 h-5" />} title="Effacer la sélection" />
+                  <IconButton onClick={() => { onSelectAll(); setMobileMenuOpen(false); }} disabled={noAnalyzedPhotos} icon={<CheckSquare className="w-5 h-5" />} title={t('bar.selectAll')} />
+                  <IconButton onClick={() => { onClearSelection(); setMobileMenuOpen(false); }} disabled={selectedPhotoCount === 0} icon={<XSquare className="w-5 h-5" />} title={t('bar.clearSel')} />
                   <IconButton
                       active={isolateSelection}
                       onClick={() => { onToggleIsolateSelection(); setMobileMenuOpen(false); }}
                       disabled={selectedPhotoCount === 0 && !isolateSelection}
                       icon={isolateSelection ? <Eye className="w-5 h-5" /> : <EyeOff className="w-5 h-5" />}
-                      title={isolateSelection ? "Show All" : "Isolate Sel."}
+                      title={isolateSelection ? t('bar.showAll') : t('bar.isolateShort')}
                       activeClass="bg-blue-500 text-white"
                   />
                 </div>
 
                 {/* Magic / AI Tools */}
-                <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 px-1 mb-1 block">Outils IA</label>
+                <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 px-1 mb-1 block">{t('bar.aiTools')}</label>
                 <div className="flex gap-1 mb-3 flex-wrap">
-                  <IconButton onClick={() => { onApplyRules(); setMobileMenuOpen(false); }} disabled={noAnalyzedPhotos} icon={<Zap className="w-5 h-5" />} title="Appliquer les règles" className="text-yellow-600 dark:text-yellow-400" />
-                  <IconButton onClick={() => { onReanalyze(); setMobileMenuOpen(false); }} disabled={noAnalyzedPhotos} icon={<RefreshCw className="w-5 h-5" />} title="Relancer l'analyse avec les réglages du profil" />
-                  <IconButton onClick={() => { onCreateRuleFromSelection(); setMobileMenuOpen(false); }} disabled={selectedPhotoCount === 0} icon={<Wand2 className="w-5 h-5" />} title="Règle auto" className="text-purple-600 dark:text-purple-400" />
-                  <IconButton onClick={() => { onFindDuplicates(); setMobileMenuOpen(false); }} disabled={noAnalyzedPhotos} icon={<Copy className="w-5 h-5" />} title="Doublons" className="text-indigo-600 dark:text-indigo-400" />
+                  <IconButton onClick={() => { onApplyRules(); setMobileMenuOpen(false); }} disabled={noAnalyzedPhotos} icon={<Zap className="w-5 h-5" />} title={t('bar.applyRules')} className="text-yellow-600 dark:text-yellow-400" />
+                  <IconButton onClick={() => { onReanalyze(); setMobileMenuOpen(false); }} disabled={noAnalyzedPhotos} icon={<RefreshCw className="w-5 h-5" />} title={t('bar.reanalyze')} />
+                  <IconButton onClick={() => { onCreateRuleFromSelection(); setMobileMenuOpen(false); }} disabled={selectedPhotoCount === 0} icon={<Wand2 className="w-5 h-5" />} title={t('bar.autoRule')} className="text-purple-600 dark:text-purple-400" />
+                  <IconButton onClick={() => { onFindDuplicates(); setMobileMenuOpen(false); }} disabled={noAnalyzedPhotos} icon={<Copy className="w-5 h-5" />} title={t('bar.duplicates')} className="text-indigo-600 dark:text-indigo-400" />
                 </div>
 
                 {/* Filters / Isolations */}
-                <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 px-1 mb-1 block">Filtres</label>
+                <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 px-1 mb-1 block">{t('bar.filters')}</label>
                 <div className="flex gap-1 mb-3 flex-wrap">
                   <IconButton
                       active={isolateDuplicates}
                       onClick={() => { onToggleIsolateDuplicates(); setMobileMenuOpen(false); }}
                       disabled={!isolateDuplicates}
                       icon={<Copy className="w-5 h-5" />}
-                      title={isolateDuplicates ? "Duplicates: On" : "Duplicates"}
+                      title={isolateDuplicates ? t('bar.dupOn') : t('bar.duplicates')}
                       activeClass="bg-indigo-500 text-white"
                       className={!isolateDuplicates ? "opacity-50" : ""}
                   />
@@ -360,7 +360,7 @@ const ControlBar: React.FC<ControlBarProps> = ({
                       onClick={() => { onToggleIsolateBlurry(); setMobileMenuOpen(false); }}
                       disabled={blurryPhotoCount === 0 && !isolateBlurry}
                       icon={<AlertTriangle className="w-5 h-5" />}
-                      title={isolateBlurry ? "Blurry: On" : "Blurry"}
+                      title={isolateBlurry ? t('bar.blurryOn') : t('bar.blurry')}
                       activeClass="bg-orange-500 text-white"
                   />
                   <IconButton
@@ -368,16 +368,16 @@ const ControlBar: React.FC<ControlBarProps> = ({
                       onClick={() => { onToggleIsolateSaved(); setMobileMenuOpen(false); }}
                       disabled={savedPhotoCount === 0 && !isolateSaved}
                       icon={<Heart className={`w-5 h-5 ${isolateSaved ? 'fill-current' : ''}`} />}
-                      title={isolateSaved ? "Saved: On" : "Saved"}
+                      title={isolateSaved ? t('bar.savedOn') : t('bar.saved')}
                       activeClass="bg-pink-500 text-white"
                   />
                 </div>
 
                 {/* Destructive Actions */}
-                <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 px-1 mb-1 block">Actions</label>
+                <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 px-1 mb-1 block">{t('bar.actions')}</label>
                 <div className="flex gap-1 flex-wrap">
-                  <IconButton onClick={() => { onMoveSavedPhotos(); setMobileMenuOpen(false); }} disabled={savedPhotoCount === 0} icon={<Save className="w-5 h-5" />} title="Déplacer" className="text-green-600 dark:text-green-500"/>
-                  <IconButton onClick={() => { onDeleteSelected(); setMobileMenuOpen(false); }} disabled={selectedPhotoCount === 0} icon={<Trash2 className="w-5 h-5" />} title="Supprimer la sélection" className="text-red-600 dark:text-red-500"/>
+                  <IconButton onClick={() => { onMoveSavedPhotos(); setMobileMenuOpen(false); }} disabled={savedPhotoCount === 0} icon={<Save className="w-5 h-5" />} title={t('bar.move')} className="text-green-600 dark:text-green-500"/>
+                  <IconButton onClick={() => { onDeleteSelected(); setMobileMenuOpen(false); }} disabled={selectedPhotoCount === 0} icon={<Trash2 className="w-5 h-5" />} title={t('bar.deleteSel')} className="text-red-600 dark:text-red-500"/>
                 </div>
               </div>
           )}
@@ -388,7 +388,7 @@ const ControlBar: React.FC<ControlBarProps> = ({
           <button
               onClick={onOpenProfileSettings}
               className="flex items-center gap-2 p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-              title="Réglages et profil"
+              title={t('bar.profile')}
           >
             <div className="w-8 h-8 bg-gradient-to-br from-primary to-accent text-white flex items-center justify-center rounded-full font-bold shadow-md">
               {userProfile.firstName.charAt(0).toUpperCase()}

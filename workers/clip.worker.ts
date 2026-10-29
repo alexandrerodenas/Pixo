@@ -74,6 +74,15 @@ function normalize(vector: Float32Array): Float32Array {
   return out;
 }
 
+// Progress for the main thread (shown in the stats widget): model download, then label embeddings
+let lastProgressAt = 0;
+function reportProgress(phase: 'download' | 'labels', done: number, total: number, force = false) {
+  const now = performance.now();
+  if (!force && now - lastProgressAt < 200) return;
+  lastProgressAt = now;
+  self.postMessage({ type: 'progress', phase, done, total });
+}
+
 async function loadModels(device: 'webgpu' | 'wasm', progress_callback: (p: any) => void) {
   const options = { device, dtype: 'q8', progress_callback } as any;
   const [tokenizer, textModel, loadedProcessor, loadedVision] = await Promise.all([
@@ -101,6 +110,7 @@ async function loadModels(device: 'webgpu' | 'wasm', progress_callback: (p: any)
     for (let r = 0; r < text_embeds.dims[0]; r++) {
       rows.push(normalize((text_embeds.data as Float32Array).slice(r * dim, (r + 1) * dim)));
     }
+    reportProgress('labels', rows.length, texts.length);
   }
   labelEmbeddings = ALL_LABELS.map((_, labelIndex) => {
     const sum = new Float32Array(rows[0].length);
@@ -117,16 +127,25 @@ function initialize() {
   initPromise ??= (async () => {
     const start = performance.now();
     const files = new Map<string, number>();
+    const loaded = new Map<string, number>();
     const progress_callback = (p: any) => {
-      if (p.status === 'progress' && p.file && typeof p.total === 'number') files.set(p.file, p.total);
+      if (p.status === 'progress' && p.file && typeof p.total === 'number') {
+        files.set(p.file, p.total);
+        loaded.set(p.file, p.loaded ?? 0);
+        let done = 0, total = 0;
+        for (const [file, size] of files) { total += size; done += loaded.get(file) ?? 0; }
+        reportProgress('download', done, total);
+      }
     };
-    let device = 'webgpu';
-    try {
-      await loadModels('webgpu', progress_callback);
-    } catch {
-      device = 'wasm';
-      await loadModels('wasm', progress_callback);
+    // Phone WebViews rarely have WebGPU: go straight to wasm instead of failing a first attempt
+    let device = 'wasm';
+    if ((self.navigator as any).gpu) {
+      try {
+        await loadModels('webgpu', progress_callback);
+        device = 'webgpu';
+      } catch { /* falls back to wasm */ }
     }
+    if (device === 'wasm') await loadModels('wasm', progress_callback);
     let downloadedBytes = 0;
     for (const total of files.values()) downloadedBytes += total;
     return { loadMs: Math.round(performance.now() - start), downloadedBytes, device };
