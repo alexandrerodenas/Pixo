@@ -96,6 +96,7 @@ export const usePhotoSelection = (
   return {
     selectedPhotos,
     isolateSelection,
+    setIsolateSelection,
     handleSelectPhoto,
     handleToggleIsolateSelection,
     selectAllFiltered,

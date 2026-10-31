@@ -29,6 +29,10 @@ const PhotoSorter: React.FC<PhotoSorterProps> = ({ userProfile, onProfileUpdate 
   React.useEffect(() => phone.onViewRequest(setViewRequestId), []);
 
   // Lifted ViewMode state so ControlBar can manage it
+  // "Show everything" at opening, and the notice shown when the rules select nothing
+  const [showPrevious, setShowPrevious] = React.useState(false);
+  const [noRuleMatchOpen, setNoRuleMatchOpen] = React.useState(false);
+
   const [viewMode, setViewMode] = React.useState<'grid' | 'folder' | 'zen'>('grid');
 
   const {
@@ -83,6 +87,12 @@ const PhotoSorter: React.FC<PhotoSorterProps> = ({ userProfile, onProfileUpdate 
     phone.clearViewRequest();
   }, [viewRequestId, photos]);
 
+  const handleApplyRules = () => {
+    const selected = handleApplyRulesManually();
+    if (selected > 0) setFilterLabel('');
+    else if (selected === 0) setNoRuleMatchOpen(true);
+  };
+
   const noAnalyzedPhotos = React.useMemo(() =>
           Array.from(photos.values()).every(p => p.status !== PhotoStatus.ANALYZED),
       [photos]);
@@ -106,7 +116,7 @@ const PhotoSorter: React.FC<PhotoSorterProps> = ({ userProfile, onProfileUpdate 
             onFilterChange={setFilterLabel}
             onSelectAll={handleSelectAll}
             onClearSelection={handleClearSelection}
-            onApplyRules={handleApplyRulesManually}
+            onApplyRules={handleApplyRules}
             onReanalyze={handleReanalyze}
             onDeleteSelected={() => handleRequestDelete()}
             selectedPhotoCount={selectedPhotos.length}
@@ -150,7 +160,9 @@ const PhotoSorter: React.FC<PhotoSorterProps> = ({ userProfile, onProfileUpdate 
             viewMode={viewMode}
             setViewMode={setViewMode}
             savedFolderName={userProfile.savedFolderName || 'saves'}
-            newPhotosOnly={userProfile.startupView === 'new'}
+            newPhotosOnly={userProfile.startupView !== 'all'}
+            showPrevious={showPrevious}
+            onShowPrevious={() => setShowPrevious(true)}
             onAnalyzeNew={handleAnalyzeNew}
         />
 
@@ -171,6 +183,24 @@ const PhotoSorter: React.FC<PhotoSorterProps> = ({ userProfile, onProfileUpdate 
             photo={viewingPhoto ? photos.get(viewingPhoto.id) ?? viewingPhoto : null}
             onClose={() => setViewingPhoto(null)}
         />
+
+        {noRuleMatchOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setNoRuleMatchOpen(false)}>
+              <div className="w-full max-w-sm rounded-xl bg-white dark:bg-gray-800 p-5 shadow-xl" onClick={e => e.stopPropagation()}>
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{t('rules.none.title')}</h2>
+                <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">{t('rules.none.body')}</p>
+                <div className="mt-4 flex justify-end gap-2">
+                  <button onClick={() => setNoRuleMatchOpen(false)} className="px-3 py-2 rounded-lg text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">{t('rules.none.close')}</button>
+                  <button
+                      onClick={() => { setFilterLabel(''); setShowPrevious(true); setNoRuleMatchOpen(false); }}
+                      className="px-3 py-2 rounded-lg text-sm font-semibold bg-gray-900 dark:bg-white text-white dark:text-gray-900"
+                  >
+                    {t('rules.none.showAll')}
+                  </button>
+                </div>
+              </div>
+            </div>
+        )}
 
         <DataWarningModal />
         <ConfirmDeleteModal

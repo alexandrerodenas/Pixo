@@ -9,7 +9,6 @@ import { isPhoneLibrary } from '../services/phoneLibrary.ts';
 import { t } from '../services/i18n.ts';
 import {
   FolderOpen,
-  Check,
   Sparkles,
   ArrowDown,
   EyeOff,
@@ -39,6 +38,8 @@ interface PhotoContentProps {
   setViewMode: (mode: 'grid' | 'folder' | 'zen') => void;
   savedFolderName: string;
   newPhotosOnly: boolean;
+  showPrevious: boolean;
+  onShowPrevious: () => void;
   onAnalyzeNew: (applyRules: boolean) => void;
 }
 
@@ -62,13 +63,15 @@ const PhotoContent: React.FC<PhotoContentProps> = ({
                                                      setViewMode,
                                                      savedFolderName,
                                                      newPhotosOnly,
+                                                     showPrevious,
+                                                     onShowPrevious,
                                                      onAnalyzeNew
                                                    }) => {
 
   // "New photos only" mode: the photos analysed in a previous session stay hidden until asked for,
   // except while searching (a search looks at everything)
-  const [showPrevious, setShowPrevious] = useState(false);
-  const hidingPrevious = newPhotosOnly && !showPrevious && filterLabel.trim() === '';
+  // Any isolation (selection, kept, duplicates, blurry) looks at every photo as well
+  const hidingPrevious = newPhotosOnly && !showPrevious && filterLabel.trim() === '' && !isolateSelection && !isolateSaved && !isolateDuplicates && !isolateBlurry;
   const previousCount = useMemo(() => {
     let count = 0;
     for (const photo of photos.values()) if (photo.fromPreviousSession) count++;
@@ -134,9 +137,8 @@ const PhotoContent: React.FC<PhotoContentProps> = ({
       return photosArray;
     }
 
-    // Photos still being analysed are left out; the new photos waiting for the user's go are shown first
+    // Photos still being analysed are left out; the order itself is never changed (library order)
     const processedPhotos = photosArray.filter(p => p.awaitingApproval || (p.status !== PhotoStatus.QUEUED && p.status !== PhotoStatus.ANALYZING));
-    if (processedPhotos.some(p => p.awaitingApproval)) processedPhotos.sort((a, b) => Number(!!b.awaitingApproval) - Number(!!a.awaitingApproval));
 
     if (!filterLabel.trim()) {
       return processedPhotos; // Return all processed if no filter
@@ -201,9 +203,13 @@ const PhotoContent: React.FC<PhotoContentProps> = ({
     if (photosToShow.size === 0) {
       return (
           <div className="flex flex-col items-center justify-center h-full text-center text-gray-500 dark:text-gray-400">
-            <Check className="w-24 h-24 mb-4 text-gray-300 dark:text-gray-600" />
-            <h2 className="text-2xl font-semibold">{t('content.noNew.title')}</h2>
-            <p className="mt-2 max-w-sm">{t('content.noNew.body')}</p>
+            <p className="mb-4 max-w-sm">{t('content.noNew.title')}</p>
+            <button
+                onClick={onShowPrevious}
+                className="px-4 py-2 rounded-lg bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-sm font-semibold hover:opacity-90"
+            >
+              {t('content.loadPrevious', { count: previousCount })}
+            </button>
           </div>
       );
     }
@@ -321,10 +327,10 @@ const PhotoContent: React.FC<PhotoContentProps> = ({
             </div>
         )}
         {renderContent()}
-        {hidingPrevious && previousCount > 0 && viewMode !== 'zen' && (
+        {hidingPrevious && previousCount > 0 && photosToShow.size > 0 && viewMode !== 'zen' && (
             <div className="flex justify-center py-6">
               <button
-                  onClick={() => setShowPrevious(true)}
+                  onClick={onShowPrevious}
                   className="px-4 py-2 rounded-lg bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-sm font-semibold hover:opacity-90"
               >
                 {t('content.loadPrevious', { count: previousCount })}
