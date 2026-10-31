@@ -5,6 +5,7 @@ import { revokePhotoURLs } from '../services/photoUrls.ts';
 import { restoreProgress, pruneProgress } from '../services/progressStore.ts';
 import * as phone from '../services/phoneLibrary.ts';
 import { t } from '../services/i18n.ts';
+import { recordDecisions } from '../services/autopilot.ts';
 import type { PhoneScanEntry } from '../services/phoneLibrary.ts';
 
 // Parallel file-system operations (deletions)
@@ -256,6 +257,7 @@ export const useFileSystem = (
       await Promise.all(Array.from({ length: Math.min(MAX_CONCURRENT_FS_OPS, queue.length) }, deleteNext));
     }
 
+    recordDecisions(deleted, 'delete'); // the autopilot learns from what the user deletes
     const deletedIds = new Set(deleted.map(p => p.id));
     setPhotos(prevPhotos => {
       const newPhotos = new Map(prevPhotos);

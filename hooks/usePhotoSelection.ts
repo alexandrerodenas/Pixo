@@ -1,6 +1,10 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import type { Photo } from '../services/types.ts';
 import { t } from '../services/i18n.ts';
+import { recordDecisions } from '../services/autopilot.ts';
+
+const hasRuleMatch = (p: Photo) =>
+  !!(p.matchedRules?.autopilot || p.matchedRules?.classification?.length || p.matchedRules?.detection?.length);
 
 
 export const usePhotoSelection = (
@@ -20,6 +24,10 @@ export const usePhotoSelection = (
   }, [selectedPhotos.length, isolateSelection]);
 
   const handleSelectPhoto = (id: string) => {
+    // Taking a photo out of a selection made by the rules or the autopilot says "keep this one":
+    // the autopilot learns from that correction.
+    const before = photos.get(id);
+    if (before?.selected && hasRuleMatch(before)) recordDecisions([before], 'correction');
     setPhotos(prev => {
       const newPhotos = new Map(prev);
       const photo = newPhotos.get(id);
