@@ -40,6 +40,7 @@ export interface Photo {
   matchedRules?: {
     classification?: string[]; // Names of matching classification rules
     detection?: string[]; // Names of matching detection rules
+    autopilot?: { score: number; features: string[] }; // Proposed by the autopilot: deletion probability and main reasons
   };
   metadata?: {
     width: number;
@@ -91,6 +92,11 @@ export interface UserProfile {
   startupView?: 'all' | 'new'; // 'new' (default): at opening, only show photos not analysed in a previous session
 
   classifier?: 'mobilenet' | 'clip'; // Classification model (CLIP is an experimental prototype)
+
+  // Autopilot: rules learned from the photos the user deletes and keeps (see services/autopilot.ts)
+  autopilot?: boolean;
+  autopilotThreshold?: number; // 50-99, minimum deletion probability to select a photo
+  autopilotIgnored?: string[]; // learned features the user asked the autopilot to ignore
 
   // Blur Settings
   blurThreshold?: number; // Raw variance below this is 'blurry'

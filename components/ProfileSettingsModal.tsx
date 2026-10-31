@@ -4,8 +4,9 @@ import type { UserProfile } from '../services/types.ts';
 import { ProfileEditor } from './ProfileEditor.tsx';
 import { RulesManager } from './RulesManager.tsx';
 import { CustomLabelsManager } from './CustomLabelsManager.tsx';
+import { AutopilotManager } from './AutopilotManager.tsx';
 import { parseImportedProfile } from '../services/profileImport.ts';
-import { User, X, Wand2, Settings, Save, Upload, Download, Tags } from 'lucide-react';
+import { User, X, Wand2, Settings, Save, Upload, Download, Tags, Sparkles } from 'lucide-react';
 import { t } from '../services/i18n.ts';
 
 interface ProfileSettingsModalProps {
@@ -19,7 +20,7 @@ interface ProfileSettingsModalProps {
 }
 
 const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ isOpen, onClose, userProfile, onSave, allAvailableClassificationLabels, allAvailableDetectionLabels, allAvailableLabels }) => {
-  const [activeTab, setActiveTab] = useState<'profile' | 'rules' | 'labels'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'rules' | 'autopilot' | 'labels'>('profile');
   const [editedProfile, setEditedProfile] = useState<UserProfile>(() => ({
     ...userProfile,
     classificationRules: userProfile.classificationRules || [],
@@ -137,6 +138,9 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ isOpen, onC
               <TabButton isActive={activeTab === 'rules'} onClick={() => setActiveTab('rules')} icon={<Wand2 className="w-4 h-4" />}>
                 {t('prof.tabRules')}
               </TabButton>
+              <TabButton isActive={activeTab === 'autopilot'} onClick={() => setActiveTab('autopilot')} icon={<Sparkles className="w-4 h-4" />}>
+                {t('prof.tabAutopilot')}
+              </TabButton>
               <TabButton isActive={activeTab === 'labels'} onClick={() => setActiveTab('labels')} icon={<Tags className="w-4 h-4" />}>
                 {t('prof.tabLabels')}
               </TabButton>
@@ -148,6 +152,9 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ isOpen, onC
             )}
             {activeTab === 'rules' && (
                 <RulesManager profile={editedProfile} setProfile={setEditedProfile} allAvailableClassificationLabels={allAvailableClassificationLabels} allAvailableDetectionLabels={allAvailableDetectionLabels} />
+            )}
+            {activeTab === 'autopilot' && (
+                <AutopilotManager profile={editedProfile} setProfile={setEditedProfile} />
             )}
             {activeTab === 'labels' && (
                 <CustomLabelsManager profile={editedProfile} setProfile={setEditedProfile} allAvailableLabels={allAvailableLabels} />

@@ -73,5 +73,11 @@ export function parseImportedProfile(raw: unknown): ImportedProfile | null {
   if (isNumberInRange(raw.blurThreshold, 0, 100000)) profile.blurThreshold = raw.blurThreshold;
   if (isNumberInRange(raw.sharpThreshold, 0, 100000)) profile.sharpThreshold = raw.sharpThreshold;
 
+  if (typeof raw.autopilot === 'boolean') profile.autopilot = raw.autopilot;
+  if (isNumberInRange(raw.autopilotThreshold, 50, 99)) profile.autopilotThreshold = raw.autopilotThreshold;
+  if (Array.isArray(raw.autopilotIgnored) && raw.autopilotIgnored.every(f => typeof f === 'string')) {
+    profile.autopilotIgnored = (raw.autopilotIgnored as string[]).slice(0, 500);
+  }
+
   return profile;
 }
