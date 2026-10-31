@@ -6,6 +6,7 @@ import * as tf from '@tensorflow/tfjs';
 import '@tensorflow/tfjs-backend-wasm';
 import '@tensorflow/tfjs-backend-webgl';
 import { selectBackend } from '../services/tfBackend.ts';
+import { sharpnessOf, describeBlur } from '../services/blurMetric.ts';
 
 let mobilenetModel: any = null;
 let cocoSsdModel: any = null;
@@ -70,60 +71,10 @@ async function createThumbnail(source: ImageBitmap): Promise<Blob | null> {
   }
 }
 
-// Blur detection logic (pure TF tensor ops, no DOM)
+// Blur detection (pure TF tensor ops, no DOM); the measure lives in services/blurMetric.ts
 function detectBlur(tfInstance: any, bitmap: ImageBitmap, blurThreshold: number, sharpThreshold: number) {
-  return tfInstance.tidy(() => {
-    let tensor = tfInstance.browser.fromPixels(bitmap);
-    const [height, width] = tensor.shape;
-
-    const targetWidth = 512;
-    const scale = targetWidth / width;
-    const targetHeight = Math.round(height * scale);
-
-    tensor = tfInstance.image.resizeBilinear(tensor, [targetHeight, targetWidth]);
-
-    // Grayscale
-    let gray = tensor.mean(2);
-    gray = gray.expandDims(0).expandDims(-1);
-
-    // Gaussian blur (noise reduction)
-    const gaussianKernel = tfInstance.tensor4d(
-      [1/16, 2/16, 1/16, 2/16, 4/16, 2/16, 1/16, 2/16, 1/16],
-      [3, 3, 1, 1]
-    );
-    gray = tfInstance.conv2d(gray, gaussianKernel, 1, 'valid');
-
-    // Laplacian edge detection
-    const laplacianKernel = tfInstance.tensor4d(
-      [0, 1, 0, 1, -4, 1, 0, 1, 0],
-      [3, 3, 1, 1]
-    );
-    const edges = tfInstance.conv2d(gray, laplacianKernel, 1, 'valid');
-
-    // Center crop 60%
-    const [, eHeight, eWidth] = edges.shape;
-    const cropH = Math.floor(eHeight * 0.6);
-    const cropW = Math.floor(eWidth * 0.6);
-    const startH = Math.floor((eHeight - cropH) / 2);
-    const startW = Math.floor((eWidth - cropW) / 2);
-    const centerEdges = tfInstance.slice(edges, [0, startH, startW, 0], [1, cropH, cropW, 1]);
-
-    const { variance } = tfInstance.moments(centerEdges);
-    const rawVariance = variance.dataSync()[0];
-
-    const normalizedScore = Math.min(100, Math.max(0, (rawVariance / 500) * 100));
-
-    let level: 'sharp' | 'ok' | 'blurry';
-    if (rawVariance < blurThreshold) level = 'blurry';
-    else if (rawVariance > sharpThreshold) level = 'sharp';
-    else level = 'ok';
-
-    return {
-      score: Math.round(normalizedScore),
-      raw: parseFloat(rawVariance.toFixed(2)),
-      level
-    };
-  });
+  const raw = tfInstance.tidy(() => sharpnessOf(tfInstance, tfInstance.browser.fromPixels(bitmap)));
+  return describeBlur(raw, { blurry: blurThreshold, sharp: sharpThreshold });
 }
 
 interface AnalysisResult {

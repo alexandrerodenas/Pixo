@@ -349,4 +349,8 @@ export const messages = {
   'new.analyze': { fr: 'Analyser seulement', en: 'Analyze only' },
   'new.waiting': { fr: '{count} nouvelle(s) photo(s) à analyser.', en: '{count} new photo(s) to analyze.' },
   'new.started': { fr: 'Analyse de {count} nouvelle(s) photo(s) lancée.', en: 'Analysis of {count} new photo(s) started.' },
+  'rules.none.title': { fr: 'Aucune photo ne correspond à tes règles', en: 'No photo matches your rules' },
+  'rules.none.body': { fr: 'Aucune photo n\'est sélectionnée. Veux-tu afficher toutes les photos ?', en: 'No photo is selected. Do you want to show all photos?' },
+  'rules.none.close': { fr: 'Fermer', en: 'Close' },
+  'rules.none.showAll': { fr: 'Afficher toutes les photos', en: 'Show all photos' },
 } as const;

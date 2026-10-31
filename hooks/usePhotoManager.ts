@@ -45,6 +45,7 @@ export const usePhotoManager = ({ userProfile, onProfileUpdate, filterLabel }: U
   const {
     selectedPhotos,
     isolateSelection,
+    setIsolateSelection,
     handleSelectPhoto,
     handleToggleIsolateSelection,
     selectAllFiltered,
@@ -273,49 +274,56 @@ export const usePhotoManager = ({ userProfile, onProfileUpdate, filterLabel }: U
     if (count > 0) setStatusMessage(t('new.started', { count }));
   }, [startNewPhotosAnalysis, setStatusMessage]);
 
-  const handleApplyRulesManually = useCallback(() => {
+  // Selects the analysed photos matching the rules, then narrows the display to the selection.
+  // Returns how many photos are selected afterwards (0: nothing to show).
+  const handleApplyRulesManually = useCallback((): number => {
     const photosToProcess = Array.from(photos.values()).filter(p => p.status === PhotoStatus.ANALYZED);
     if (photosToProcess.length === 0) {
       setStatusMessage(t('pm.noAnalyzed'));
-      return;
+      return -1;
+    }
+
+    const matches = new Map<string, { classification: string[]; detection: string[] }>();
+    for (const photo of photosToProcess) {
+      const classification = applyRules(photo.classifications, userProfileRef.current.classificationRules);
+      const detection = applyRules(photo.detections, userProfileRef.current.detectionRules);
+      if (classification.length > 0 || detection.length > 0) matches.set(photo.id, { classification, detection });
     }
 
     let newlySelectedCount = 0;
-    let matchedCount = 0;
+    let selectedAfter = 0;
+    for (const photo of photos.values()) {
+      if (photo.selected) selectedAfter++;
+      else if (matches.has(photo.id)) { selectedAfter++; newlySelectedCount++; }
+    }
 
-    setPhotos(prevPhotos => {
-      const newPhotos = new Map(prevPhotos);
-      for (const photo of photosToProcess) {
-        const classificationMatches = applyRules(photo.classifications, userProfileRef.current.classificationRules);
-        const detectionMatches = applyRules(photo.detections, userProfileRef.current.detectionRules);
-
-        if (classificationMatches.length > 0 || detectionMatches.length > 0) {
-          matchedCount++;
-          const currentPhoto = newPhotos.get(photo.id)!;
-          if (!currentPhoto.selected) {
-            newlySelectedCount++;
-          }
-          newPhotos.set(photo.id, {
-            ...currentPhoto,
-            selected: true,
-            matchedRules: {
-              classification: classificationMatches,
-              detection: detectionMatches,
-            }
-          });
+    if (matches.size > 0) {
+      setPhotos(prevPhotos => {
+        const newPhotos = new Map(prevPhotos);
+        for (const [id, m] of matches) {
+          const currentPhoto = newPhotos.get(id);
+          if (currentPhoto) newPhotos.set(id, { ...currentPhoto, selected: true, matchedRules: { classification: m.classification, detection: m.detection } });
         }
-      }
-      return newPhotos;
-    });
+        return newPhotos;
+      });
+    }
 
     if (newlySelectedCount > 0) {
       setStatusMessage(t('pm.ruleSelected', { count: newlySelectedCount }));
-    } else if (matchedCount > 0) {
-      setStatusMessage(t('pm.ruleAlready', { count: matchedCount }));
+    } else if (matches.size > 0) {
+      setStatusMessage(t('pm.ruleAlready', { count: matches.size }));
     } else {
       setStatusMessage(t('pm.ruleNone'));
     }
-  }, [photos, applyRules, userProfileRef, setPhotos, setStatusMessage]);
+
+    if (selectedAfter > 0) {
+      setIsolateSaved(false);
+      setIsolateDuplicates(false);
+      setIsolateBlurry(false);
+      setIsolateSelection(true);
+    }
+    return selectedAfter;
+  }, [photos, applyRules, userProfileRef, setPhotos, setStatusMessage, setIsolateSelection]);
 
   const handleFindDuplicates = useCallback(async () => {
     setStatusMessage(t('pm.dupScanning'));

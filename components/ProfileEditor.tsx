@@ -86,7 +86,7 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ profile, setProfil
 
         <div>
           <label className="block font-semibold mb-1">{t('pe.startup')}</label>
-          <select value={profile.startupView || 'all'} onChange={e => handleInputChange('startupView', e.target.value)} className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary">
+          <select value={profile.startupView || 'new'} onChange={e => handleInputChange('startupView', e.target.value)} className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary">
             <option value="all">{t('pe.startAll')}</option>
             <option value="new">{t('pe.startNew')}</option>
           </select>
