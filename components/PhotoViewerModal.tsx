@@ -4,7 +4,8 @@ import type { Photo } from '../services/types.ts';
 import { PhotoStatus } from '../services/types.ts';
 import { Spinner } from './ui.tsx';
 import ZoomableImage from './ZoomableImage.tsx';
-import { X, Bot, Boxes, Wand2, Focus, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { X, Bot, Boxes, Wand2, Focus, AlertTriangle, CheckCircle2, Sparkles } from 'lucide-react';
+import { describeFeature } from '../services/autopilotLabels.ts';
 import { t } from '../services/i18n.ts';
 
 interface PhotoViewerModalProps {
@@ -69,6 +70,18 @@ const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({ photo, onClose }) =
                               </li>
                           ))}
                         </ul>
+                      </div>
+                  )}
+
+                  {photo.matchedRules?.autopilot && (
+                      <div className="p-3 bg-purple-50 dark:bg-purple-900/30 border-l-4 border-purple-500 rounded-r-md">
+                        <h3 className="text-lg font-bold mb-2 flex items-center gap-2 text-purple-700 dark:text-purple-300">
+                          <Sparkles className="w-5 h-5"/> {t('ap.viewerTitle', { score: photo.matchedRules.autopilot.score })}
+                        </h3>
+                        <ul className="space-y-1 text-sm list-disc list-inside text-gray-700 dark:text-gray-300">
+                          {photo.matchedRules.autopilot.features.map(feature => <li key={feature}>{describeFeature(feature)}</li>)}
+                        </ul>
+                        <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">{t('ap.viewerHint')}</p>
                       </div>
                   )}
 

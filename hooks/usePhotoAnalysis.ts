@@ -4,6 +4,7 @@ import type { UserProfile, Photo, FilterRule, Prediction, ModelsLoadState } from
 import { PhotoStatus } from '../services/types.ts';
 import * as api from '../services/api.ts';
 import { classifyWithClip } from '../services/clipClient.ts';
+import { autopilotMatch } from '../services/autopilot.ts';
 
 
 type PhotoPatch = (photo: Photo | undefined) => Photo | undefined;
@@ -166,11 +167,13 @@ export const usePhotoAnalysis = (
         if (updatedPhoto.status === PhotoStatus.ANALYZED && (userProfileRef.current?.autoApplyRules || currentPhoto.applyRulesWhenAnalyzed)) {
           const classificationMatches = applyRulesRef.current(updatedPhoto.classifications, userProfileRef.current.classificationRules);
           const detectionMatches = applyRulesRef.current(updatedPhoto.detections, userProfileRef.current.detectionRules);
-          if (classificationMatches.length > 0 || detectionMatches.length > 0) {
+          const autopilot = userProfileRef.current.autopilot ? autopilotMatch(updatedPhoto, userProfileRef.current.autopilotThreshold) : null;
+          if (classificationMatches.length > 0 || detectionMatches.length > 0 || autopilot) {
             updatedPhoto.selected = true;
             updatedPhoto.matchedRules = {
               classification: classificationMatches,
               detection: detectionMatches,
+              ...(autopilot ? { autopilot } : {}),
             };
           }
         }

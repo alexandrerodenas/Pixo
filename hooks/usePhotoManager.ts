@@ -11,6 +11,7 @@ import { useBackgroundProgress } from './useBackgroundProgress.ts';
 import { findDuplicateGroups } from '../services/duplicateDetection.ts';
 import { revokePhotoURLs } from '../services/photoUrls.ts';
 import { t } from '../services/i18n.ts';
+import { initAutopilot, setIgnoredFeatures, recordDecisions, forgetKeep, autopilotMatch } from '../services/autopilot.ts';
 
 
 interface UsePhotoManagerProps {
@@ -128,7 +129,15 @@ export const usePhotoManager = ({ userProfile, onProfileUpdate, filterLabel }: U
     };
   }, [photos, userProfile.customLabels]);
 
+  // Autopilot: load the stored decisions once, and follow the features the user asked to ignore
+  useEffect(() => { initAutopilot(); }, []);
+  useEffect(() => { setIgnoredFeatures(userProfile.autopilotIgnored); }, [userProfile.autopilotIgnored]);
+
   const handleToggleSavePhoto = useCallback((id: string) => {
+    const before = photosRef.current.get(id);
+    if (before) {
+      if (before.isSaved) forgetKeep([before]); else recordDecisions([before], 'keep');
+    }
     setPhotos(prev => {
       const newPhotos = new Map(prev);
       const photo = newPhotos.get(id);
@@ -144,6 +153,7 @@ export const usePhotoManager = ({ userProfile, onProfileUpdate, filterLabel }: U
 
     // If all photos are already saved, unsave all. Otherwise, save all.
     const allAreSaved = photosToSave.every(p => p.isSaved);
+    if (allAreSaved) forgetKeep(photosToSave); else recordDecisions(photosToSave.filter(p => !p.isSaved), 'keep');
 
     setPhotos(prev => {
       const newPhotos = new Map(prev);
@@ -283,11 +293,15 @@ export const usePhotoManager = ({ userProfile, onProfileUpdate, filterLabel }: U
       return -1;
     }
 
-    const matches = new Map<string, { classification: string[]; detection: string[] }>();
+    const profile = userProfileRef.current;
+    const matches = new Map<string, NonNullable<Photo['matchedRules']>>();
     for (const photo of photosToProcess) {
-      const classification = applyRules(photo.classifications, userProfileRef.current.classificationRules);
-      const detection = applyRules(photo.detections, userProfileRef.current.detectionRules);
-      if (classification.length > 0 || detection.length > 0) matches.set(photo.id, { classification, detection });
+      const classification = applyRules(photo.classifications, profile.classificationRules);
+      const detection = applyRules(photo.detections, profile.detectionRules);
+      const autopilot = profile.autopilot ? autopilotMatch(photo, profile.autopilotThreshold) : null;
+      if (classification.length > 0 || detection.length > 0 || autopilot) {
+        matches.set(photo.id, { classification, detection, ...(autopilot ? { autopilot } : {}) });
+      }
     }
 
     let newlySelectedCount = 0;
@@ -302,7 +316,7 @@ export const usePhotoManager = ({ userProfile, onProfileUpdate, filterLabel }: U
         const newPhotos = new Map(prevPhotos);
         for (const [id, m] of matches) {
           const currentPhoto = newPhotos.get(id);
-          if (currentPhoto) newPhotos.set(id, { ...currentPhoto, selected: true, matchedRules: { classification: m.classification, detection: m.detection } });
+          if (currentPhoto) newPhotos.set(id, { ...currentPhoto, selected: true, matchedRules: m });
         }
         return newPhotos;
       });
