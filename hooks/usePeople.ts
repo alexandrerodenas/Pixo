@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Photo } from '../services/types.ts';
 import { PhotoStatus } from '../services/types.ts';
-import { FaceIndex, type FaceRecord, type Person } from '../services/faceIndex.ts';
+import { FaceIndex, displayName, type FaceRecord, type Person } from '../services/faceIndex.ts';
 import { clearFaceData, loadFaceData, saveFaceChanges, type ScanRecord } from '../services/faceStore.ts';
 import { detectFaces, stopFaceWorker } from '../services/faceClient.ts';
+import { setPhotoPeople, type PhotoPeople } from '../services/peopleRegistry.ts';
+import { mergePersonFeature } from '../services/autopilot.ts';
+import { t } from '../services/i18n.ts';
 
 // Face recognition, opt-in: once the regular analysis of a photo is done, its faces are looked for
 // in the background, one photo at a time, and grouped into people (services/faceIndex.ts).
@@ -28,7 +31,13 @@ export interface PeopleState {
 const isFinished = (p: Photo) => p.status === PhotoStatus.ANALYZED || p.status === PhotoStatus.UNCATEGORIZED;
 const fingerprintOf = (p: Photo) => ({ size: p.source?.size ?? p.metadata?.size ?? 0, lastModified: p.source?.lastModified ?? 0 });
 
-export function usePeople(photos: Map<string, Photo>, enabled: boolean): PeopleState {
+/**
+ * @param onPhotosScanned called with the photos whose faces were just found, so the autopilot can
+ *   look at them again (people are among what it learns from).
+ */
+export function usePeople(photos: Map<string, Photo>, enabled: boolean, onPhotosScanned?: (photoIds: string[]) => void): PeopleState {
+  const onScannedRef = useRef(onPhotosScanned);
+  onScannedRef.current = onPhotosScanned;
   const indexRef = useRef<FaceIndex | null>(null);
   const scansRef = useRef(new Map<string, ScanRecord>());
   const failedRef = useRef(new Set<string>());
@@ -49,12 +58,30 @@ export function usePeople(photos: Map<string, Photo>, enabled: boolean): PeopleS
     urlsRef.current.clear();
   };
 
+  // Who is on each photo, for the autopilot's features
+  const publishToAutopilot = useCallback(() => {
+    const index = indexRef.current;
+    if (!index) { setPhotoPeople(new Map(), new Map()); return; }
+    const byPhoto = new Map<string, PhotoPeople>();
+    for (const photoId of scansRef.current.keys()) byPhoto.set(photoId, { people: [], faces: 0 });
+    for (const face of index.faces.values()) {
+      const entry = byPhoto.get(face.photoId) ?? { people: [], faces: 0 };
+      entry.faces++;
+      if (!entry.people.includes(face.personId)) entry.people.push(face.personId);
+      byPhoto.set(face.photoId, entry);
+    }
+    const names = new Map<string, string>();
+    for (const person of index.people.values()) names.set(person.id, displayName(person, t('people.default')));
+    setPhotoPeople(byPhoto, names);
+  }, []);
+
   // Load what is already known, or stop everything when the feature is off
   useEffect(() => {
     if (!enabled) {
       stopFaceWorker();
       indexRef.current = null;
       modelReadyRef.current = false;
+      setPhotoPeople(new Map(), new Map());
       setReady(false);
       return;
     }
@@ -63,11 +90,12 @@ export function usePeople(photos: Map<string, Photo>, enabled: boolean): PeopleS
       if (cancelled) return;
       indexRef.current = new FaceIndex(faces, people);
       scansRef.current = new Map(scans.map(s => [s.photoId, s]));
+      publishToAutopilot();
       setReady(true);
       bump();
     }).catch(e => setError(e?.message ?? String(e)));
     return () => { cancelled = true; };
-  }, [enabled, bump]);
+  }, [enabled, bump, publishToAutopilot]);
 
   useEffect(() => () => { stopFaceWorker(); revokeUrls(); }, []);
 
@@ -81,7 +109,9 @@ export function usePeople(photos: Map<string, Photo>, enabled: boolean): PeopleS
   const persist = useCallback(async (scans?: ScanRecord[]) => {
     const index = indexRef.current;
     if (!index) return;
-    const changes = index.takeChanges();
+    const { merges, ...changes } = index.takeChanges();
+    for (const [from, into] of merges) mergePersonFeature(from, into);
+    publishToAutopilot();
     for (const id of changes.removedFaces) {
       const url = urlsRef.current.get(id);
       if (url) { URL.revokeObjectURL(url); urlsRef.current.delete(id); }
@@ -91,7 +121,7 @@ export function usePeople(photos: Map<string, Photo>, enabled: boolean): PeopleS
     } catch (e) {
       console.warn('Could not save faces:', e);
     }
-  }, []);
+  }, [publishToAutopilot]);
 
   // Background queue: one photo at a time, so the regular analysis keeps the priority
   const run = useCallback(async () => {
@@ -115,6 +145,7 @@ export function usePeople(photos: Map<string, Photo>, enabled: boolean): PeopleS
           const scan = { photoId: photo.id, ...fingerprintOf(photo) };
           scansRef.current.set(photo.id, scan);
           await persist([scan]);
+          onScannedRef.current?.([photo.id]);
           setError(undefined);
           bump();
         } catch (e: any) {
@@ -189,9 +220,10 @@ export function usePeople(photos: Map<string, Photo>, enabled: boolean): PeopleS
     scansRef.current.clear();
     failedRef.current.clear();
     indexRef.current = enabled ? new FaceIndex() : null;
+    publishToAutopilot();
     bump();
     if (enabled) run();
-  }, [enabled, bump, run]);
+  }, [enabled, bump, run, publishToAutopilot]);
 
   return { enabled, people, progress, error, faceUrl, photoIdsOf, rename, merge, detachFace, clearAll };
 }

@@ -68,6 +68,7 @@ export class FaceIndex {
   private dirtyPeople = new Set<string>();
   private dirtyFaces = new Set<string>();
   private removedPeople = new Set<string>();
+  private merges: Array<[string, string]> = [];
 
   constructor(faces: FaceRecord[] = [], people: Person[] = []) {
     for (const p of people) {
@@ -237,6 +238,7 @@ export class FaceIndex {
   /** Puts every face of `fromId` into `intoId`. The kept name is the one of `intoId`, or else of `fromId`. */
   merge(fromId: string, intoId: string) {
     if (fromId === intoId) return;
+    this.merges.push([fromId, intoId]);
     const from = this.people.get(fromId);
     const into = this.people.get(intoId);
     if (!from || !into) return;
@@ -293,7 +295,9 @@ export class FaceIndex {
       removedFaces: [...this.dirtyFaces].filter(id => !this.faces.has(id)),
       people: [...this.dirtyPeople].map(id => this.people.get(id)).filter((p): p is Person => !!p),
       removedPeople: [...this.removedPeople],
+      merges: this.merges,
     };
+    this.merges = [];
     this.dirtyFaces.clear();
     this.dirtyPeople.clear();
     this.removedPeople.clear();

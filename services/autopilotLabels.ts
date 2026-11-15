@@ -1,5 +1,6 @@
 import { t, type MessageKey } from './i18n.ts';
 import { messages } from './messages.ts';
+import { personName } from './peopleRegistry.ts';
 
 const FIXED: Record<string, MessageKey> = {
   'd:none': 'ap.f.noObject',
@@ -31,6 +32,7 @@ export function describeFeature(feature: string): string {
   const i = feature.indexOf(':');
   const kind = feature.slice(0, i);
   const value = feature.slice(i + 1);
+  if (kind === 'person') return t('ap.f.person', { label: personName(value) ?? t('ap.f.personUnknown') });
   if (WITH_LABEL[kind]) return t(WITH_LABEL[kind], { label: value });
   const key = `ap.f.${kind}.${value}`;
   return key in messages ? t(key as MessageKey) : feature;
