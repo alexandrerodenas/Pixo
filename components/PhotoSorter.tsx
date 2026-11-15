@@ -12,6 +12,9 @@ import PhotoViewerModal from './PhotoViewerModal.tsx';
 import ProfileSettingsModal from './ProfileSettingsModal.tsx';
 import ConfirmDeleteModal from './ConfirmDeleteModal.tsx';
 import DataWarningModal from './DataWarningModal.tsx';
+import PeopleModal from './PeopleModal.tsx';
+import { usePeople } from '../hooks/usePeople.ts';
+import { displayName } from '../services/faceIndex.ts';
 import { t } from '../services/i18n.ts';
 
 interface PhotoSorterProps {
@@ -77,6 +80,17 @@ const PhotoSorter: React.FC<PhotoSorterProps> = ({ userProfile, onProfileUpdate 
     blurryPhotoCount
   } = usePhotoManager({ userProfile, onProfileUpdate, filterLabel });
 
+  // People: faces grouped by person, computed and kept on the device
+  const people = usePeople(photos, !!userProfile.faceRecognition);
+  const [isPeopleOpen, setPeopleOpen] = React.useState(false);
+  const [personFilterId, setPersonFilterId] = React.useState<string | null>(null);
+  const personFilter = React.useMemo(() => {
+    if (!personFilterId) return null;
+    const person = people.people.find(p => p.id === personFilterId);
+    if (!person) return null;
+    return { name: displayName(person, t('people.default')), photoIds: people.photoIdsOf(person.id) };
+  }, [personFilterId, people.people, people.photoIdsOf]);
+
 
   React.useEffect(() => {
     if (!viewRequestId) return;
@@ -109,6 +123,8 @@ const PhotoSorter: React.FC<PhotoSorterProps> = ({ userProfile, onProfileUpdate 
         <ControlBar
             userProfile={userProfile}
             onOpenProfileSettings={() => setProfileModalOpen(true)}
+            onOpenPeople={() => setPeopleOpen(true)}
+            personFilterActive={!!personFilter}
             onLoadPhotos={handleLoadPhotos}
             isLoading={isLoading}
             isApiSupported={isApiSupported}
@@ -164,6 +180,8 @@ const PhotoSorter: React.FC<PhotoSorterProps> = ({ userProfile, onProfileUpdate 
             showPrevious={showPrevious}
             onShowPrevious={() => setShowPrevious(true)}
             onAnalyzeNew={handleAnalyzeNew}
+            personFilter={personFilter}
+            onClearPersonFilter={() => setPersonFilterId(null)}
         />
 
         {/* Floating HUD (Stats & Status) */}
@@ -176,6 +194,7 @@ const PhotoSorter: React.FC<PhotoSorterProps> = ({ userProfile, onProfileUpdate 
                 modelsLoadState={modelsLoadState}
                 tfBackend={tfBackend}
                 processingQueueCount={processingQueueCount}
+                faceProgress={people.enabled ? people.progress : null}
             />
         )}
 
@@ -201,6 +220,14 @@ const PhotoSorter: React.FC<PhotoSorterProps> = ({ userProfile, onProfileUpdate 
               </div>
             </div>
         )}
+
+        <PeopleModal
+            isOpen={isPeopleOpen}
+            onClose={() => setPeopleOpen(false)}
+            people={people}
+            onToggleEnabled={enabled => onProfileUpdate({ ...userProfile, faceRecognition: enabled })}
+            onShowPerson={id => { setPersonFilterId(id); setPeopleOpen(false); }}
+        />
 
         <DataWarningModal />
         <ConfirmDeleteModal

@@ -98,6 +98,9 @@ export interface UserProfile {
   autopilotThreshold?: number; // 50-99, minimum deletion probability to select a photo
   autopilotIgnored?: string[]; // learned features the user asked the autopilot to ignore
 
+  // People: faces grouped by person, on the device (see hooks/usePeople.ts)
+  faceRecognition?: boolean;
+
   // Blur Settings
   blurThreshold?: number; // Raw variance below this is 'blurry'
   sharpThreshold?: number; // Raw variance above this is 'sharp'

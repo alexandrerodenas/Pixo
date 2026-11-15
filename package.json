@@ -1,7 +1,7 @@
 {
   "name": "ai-photo-sorter",
   "private": true,
-  "version": "1.21.0",
+  "version": "1.22.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -21,6 +21,7 @@
     "@tensorflow/tfjs-backend-wasm": "4.22.0",
     "@tensorflow/tfjs-backend-webgl": "4.22.0",
     "@tensorflow/tfjs-backend-webgpu": "4.22.0",
+    "@vladmandic/face-api": "^1.7.15",
     "lucide-react": "^0.525.0",
     "motion": "^12.38.0",
     "react": "^19.1.0",
