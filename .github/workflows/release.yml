@@ -1,0 +1,28 @@
+name: Release
+
+# Creates the vX.Y.Z tag and GitHub release automatically when a version bump in
+# package.json lands on develop, so no version is skipped because a manual step was forgotten.
+on:
+  push:
+    branches: [develop]
+    paths: [package.json]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create the release if the version is new
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version="v$(node -p "require('./package.json').version")"
+          if gh release view "$version" >/dev/null 2>&1; then
+            echo "$version already released, nothing to do."
+            exit 0
+          fi
+          gh release create "$version" --target "${{ github.sha }}" --title "$version" --generate-notes
