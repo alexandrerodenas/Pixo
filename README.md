@@ -42,6 +42,7 @@ Leveraging the File System Access API and TensorFlow.js, it runs MobileNet and C
 - **AI Analysis** — Scene classification (MobileNet) and object detection (COCO-SSD), accelerated via WebGPU, WASM, or WebGL.
 - **Blur Detection** — Laplacian Variance analysis on GPU, scoring each photo 0–100 with visual indicators.
 - **Duplicate Detection** — Semantic embeddings to find exact duplicates, near-duplicates, and burst photos, auto-selecting the best version.
+- **People (experimental, opt-in)** — Faces are detected and grouped by person on the device (face-api, ~7 MB of weights downloaded once). Rename people, merge groups, take a misplaced face out, and filter the photos by person. Face data never leaves the device and is erased when the feature is turned off.
 - **Dual View Modes** — Grid View for browsing, Folder View grouped by AI classification labels.
 - **Custom Rules** — Create classification and detection rules (e.g., *"SELECT photos with 'beach' classification > 80%"*) with optional auto-apply.
 - **Uncertainty Filtering** — Configurable threshold to flag ambiguous photos as *Uncategorized* for manual review.

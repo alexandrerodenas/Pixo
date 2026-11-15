@@ -19,7 +19,7 @@ import {
   LayoutGrid,
   FolderTree,
   Sparkles,
-  MoreHorizontal, Smartphone, RefreshCw } from 'lucide-react';
+  MoreHorizontal, Smartphone, RefreshCw, Users } from 'lucide-react';
 import { Spinner } from './ui.tsx';
 import AutocompleteInput from './AutocompleteInput.tsx';
 import { isPhoneLibrary } from '../services/phoneLibrary.ts';
@@ -28,6 +28,8 @@ import { t } from '../services/i18n.ts';
 interface ControlBarProps {
   userProfile: UserProfile;
   onOpenProfileSettings: () => void;
+  onOpenPeople: () => void;
+  personFilterActive: boolean;
   onLoadPhotos: () => void;
   isLoading: boolean;
   isApiSupported: boolean;
@@ -62,6 +64,8 @@ interface ControlBarProps {
 const ControlBar: React.FC<ControlBarProps> = ({
                                                  userProfile,
                                                  onOpenProfileSettings,
+                                                 onOpenPeople,
+                                                 personFilterActive,
                                                  onLoadPhotos,
                                                  isLoading,
                                                  isApiSupported,
@@ -236,6 +240,14 @@ const ControlBar: React.FC<ControlBarProps> = ({
           {/* Filters / Isolations */}
           <div className="flex gap-1 shrink-0">
             <IconButton
+                active={personFilterActive}
+                onClick={onOpenPeople}
+                icon={<Users className="w-5 h-5" />}
+                title={t('people.button')}
+                activeClass="bg-teal-500 text-white"
+                className={!personFilterActive ? "text-teal-600 dark:text-teal-400 hover:bg-teal-100 dark:hover:bg-teal-900/30" : ""}
+            />
+            <IconButton
                 active={isolateDuplicates}
                 onClick={onToggleIsolateDuplicates}
                 disabled={!isolateDuplicates} // Keep enabled if active to toggle off
@@ -346,6 +358,14 @@ const ControlBar: React.FC<ControlBarProps> = ({
                 {/* Filters / Isolations */}
                 <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 px-1 mb-1 block">{t('bar.filters')}</label>
                 <div className="flex gap-1 mb-3 flex-wrap">
+                  <IconButton
+                      active={personFilterActive}
+                      onClick={() => { onOpenPeople(); setMobileMenuOpen(false); }}
+                      icon={<Users className="w-5 h-5" />}
+                      title={t('people.button')}
+                      activeClass="bg-teal-500 text-white"
+                      className={!personFilterActive ? "text-teal-600 dark:text-teal-400" : ""}
+                  />
                   <IconButton
                       active={isolateDuplicates}
                       onClick={() => { onToggleIsolateDuplicates(); setMobileMenuOpen(false); }}

@@ -16,6 +16,8 @@ import {
   Heart,
   Copy,
   AlertTriangle,
+  Users,
+  X,
 } from 'lucide-react';
 
 interface PhotoContentProps {
@@ -41,6 +43,8 @@ interface PhotoContentProps {
   showPrevious: boolean;
   onShowPrevious: () => void;
   onAnalyzeNew: (applyRules: boolean) => void;
+  personFilter?: { name: string; photoIds: Set<string> } | null;
+  onClearPersonFilter?: () => void;
 }
 
 const PhotoContent: React.FC<PhotoContentProps> = ({
@@ -65,13 +69,15 @@ const PhotoContent: React.FC<PhotoContentProps> = ({
                                                      newPhotosOnly,
                                                      showPrevious,
                                                      onShowPrevious,
-                                                     onAnalyzeNew
+                                                     onAnalyzeNew,
+                                                     personFilter,
+                                                     onClearPersonFilter
                                                    }) => {
 
   // "New photos only" mode: the photos analysed in a previous session stay hidden until asked for,
   // except while searching (a search looks at everything)
   // Any isolation (selection, kept, duplicates, blurry) looks at every photo as well
-  const hidingPrevious = newPhotosOnly && !showPrevious && filterLabel.trim() === '' && !isolateSelection && !isolateSaved && !isolateDuplicates && !isolateBlurry;
+  const hidingPrevious = newPhotosOnly && !showPrevious && filterLabel.trim() === '' && !isolateSelection && !isolateSaved && !isolateDuplicates && !isolateBlurry && !personFilter;
   const previousCount = useMemo(() => {
     let count = 0;
     for (const photo of photos.values()) if (photo.fromPreviousSession) count++;
@@ -80,6 +86,11 @@ const PhotoContent: React.FC<PhotoContentProps> = ({
 
   const photosToShow = useMemo(() => {
     let photosToReturn = photos;
+    // A person picked in the People screen: only their photos, combined with the other filters
+    if (personFilter) {
+      photosToReturn = new Map();
+      for (const [id, photo] of photos.entries()) if (personFilter.photoIds.has(id)) photosToReturn.set(id, photo);
+    }
     if (hidingPrevious) {
       photosToReturn = new Map();
       for (const [id, photo] of photos.entries()) if (!photo.fromPreviousSession) photosToReturn.set(id, photo);
@@ -126,7 +137,7 @@ const PhotoContent: React.FC<PhotoContentProps> = ({
     }
 
     return photosToReturn;
-  }, [photos, hidingPrevious, isolateSelection, isolateSaved, isolateDuplicates, isolateBlurry]);
+  }, [photos, hidingPrevious, isolateSelection, isolateSaved, isolateDuplicates, isolateBlurry, personFilter]);
 
   const filteredPhotosForGrid = useMemo(() => {
     const photosArray = Array.from(photosToShow.values());
@@ -324,6 +335,14 @@ const PhotoContent: React.FC<PhotoContentProps> = ({
                   </button>
                 </div>
               </div>
+            </div>
+        )}
+        {personFilter && viewMode !== 'zen' && (
+            <div className="mb-4 flex items-center gap-2">
+              <span className="inline-flex items-center gap-2 pl-3 pr-1 py-1 rounded-full bg-teal-100 dark:bg-teal-900/40 text-teal-800 dark:text-teal-200 text-sm font-semibold">
+                <Users className="w-4 h-4" /> {t('people.filterChip', { name: personFilter.name })}
+                <button onClick={onClearPersonFilter} aria-label={t('people.filterClear')} title={t('people.filterClear')} className="p-1 rounded-full hover:bg-teal-200 dark:hover:bg-teal-800"><X className="w-4 h-4" /></button>
+              </span>
             </div>
         )}
         {renderContent()}
