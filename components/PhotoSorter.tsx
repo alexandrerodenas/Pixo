@@ -77,11 +77,12 @@ const PhotoSorter: React.FC<PhotoSorterProps> = ({ userProfile, onProfileUpdate 
     handleToggleIsolateDuplicates,
     isolateBlurry,
     handleToggleIsolateBlurry,
-    blurryPhotoCount
+    blurryPhotoCount,
+    reconsiderWithPeople
   } = usePhotoManager({ userProfile, onProfileUpdate, filterLabel });
 
   // People: faces grouped by person, computed and kept on the device
-  const people = usePeople(photos, !!userProfile.faceRecognition);
+  const people = usePeople(photos, !!userProfile.faceRecognition, reconsiderWithPeople);
   const [isPeopleOpen, setPeopleOpen] = React.useState(false);
   const [personFilterId, setPersonFilterId] = React.useState<string | null>(null);
   const personFilter = React.useMemo(() => {

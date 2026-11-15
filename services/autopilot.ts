@@ -1,5 +1,6 @@
 import type { Photo } from './types.ts';
 import { PhotoStatus } from './types.ts';
+import { peopleOfPhoto } from './peopleRegistry.ts';
 import { train, predict, projectEmbedding, embeddingWeights, emptyModel, VISUAL, type Model, type Quality, type TrainingRow } from './autopilotModel.ts';
 
 // Autopilot: learns from the user's decisions (photos deleted vs photos kept) which photos they
@@ -106,6 +107,13 @@ export function extractFeatures(photo: Photo, now: number = Date.now()): Record<
     if (ratio >= 1.9) put('shape:elongated'); // phone screenshots, panoramas
     else if (ratio < 1.1) put('shape:square');
     put(h > w ? 'shape:portrait' : 'shape:landscape');
+  }
+
+  // Who is on it (people recognition, when on and the photo's faces were looked for)
+  const people = peopleOfPhoto(photo.id);
+  if (people) {
+    put(`faces:${people.faces === 0 ? 'none' : people.faces === 1 ? 'one' : people.faces <= 3 ? 'few' : 'group'}`);
+    for (const id of people.people) put(`person:${id}`);
   }
 
   // Age of the file
@@ -318,6 +326,27 @@ export function forgetKeep(photos: Photo[]) {
   if (remove.length === 0) return;
   remove.forEach(id => examples.delete(id));
   write([], remove);
+  scheduleRetrain();
+}
+
+/**
+ * Two people were merged in the People screen: past decisions about `fromId` now count for
+ * `intoId`, so what the autopilot learned about either is kept.
+ */
+export function mergePersonFeature(fromId: string, intoId: string) {
+  const from = `person:${fromId}`;
+  const into = `person:${intoId}`;
+  const put: AutopilotExample[] = [];
+  for (const e of examples.values()) {
+    if (!(from in e.features)) continue;
+    const features = { ...e.features, [into]: Math.max(e.features[into] ?? 0, e.features[from]) };
+    delete features[from];
+    const updated = { ...e, features };
+    examples.set(e.id, updated);
+    put.push(updated);
+  }
+  if (put.length === 0) return;
+  write(put, []);
   scheduleRetrain();
 }
 

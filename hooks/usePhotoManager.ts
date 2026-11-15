@@ -284,6 +284,26 @@ export const usePhotoManager = ({ userProfile, onProfileUpdate, filterLabel }: U
     if (count > 0) setStatusMessage(t('new.started', { count }));
   }, [startNewPhotosAnalysis, setStatusMessage]);
 
+  // People recognition finds faces after the analysis: a photo the rules looked at when it was
+  // analysed is looked at again by the autopilot, now that it knows who is on it.
+  const reconsiderWithPeople = useCallback((photoIds: string[]) => {
+    const profile = userProfileRef.current;
+    if (!profile.autopilot) return;
+    setPhotos(prev => {
+      let next: Map<string, Photo> | null = null;
+      for (const id of photoIds) {
+        const photo = prev.get(id);
+        if (!photo || photo.selected || photo.status !== PhotoStatus.ANALYZED) continue;
+        if (!profile.autoApplyRules && !photo.applyRulesWhenAnalyzed) continue;
+        const autopilot = autopilotMatch(photo, profile.autopilotThreshold);
+        if (!autopilot) continue;
+        next ??= new Map(prev);
+        next.set(id, { ...photo, selected: true, matchedRules: { classification: [], detection: [], ...photo.matchedRules, autopilot } });
+      }
+      return next ?? prev;
+    });
+  }, []);
+
   // Selects the analysed photos matching the rules, then narrows the display to the selection.
   // Returns how many photos are selected afterwards (0: nothing to show).
   const handleApplyRulesManually = useCallback((): number => {
@@ -523,6 +543,7 @@ export const usePhotoManager = ({ userProfile, onProfileUpdate, filterLabel }: U
     savedPhotos,
     handleRequestDelete,
     handleApplyRulesManually,
+    reconsiderWithPeople,
     handleReanalyze,
     handleAnalyzeNew,
     handleSelectAll,
