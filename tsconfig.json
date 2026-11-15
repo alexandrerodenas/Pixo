@@ -26,5 +26,6 @@
     "paths": {
       "@/*" :  ["./*"]
     }
-  }
+  },
+  "exclude": ["node_modules", "dist", "android", "tests"]
 }

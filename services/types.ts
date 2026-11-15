@@ -28,7 +28,7 @@ export interface Photo {
   customLabel?: string;
 
   // Duplicate Detection
-  embedding?: number[]; // 1024-dim vector
+  embedding?: number[]; // 1024-dim vector (MobileNet): duplicates, and what the autopilot learns photos look like
   duplicateGroupId?: string;
   isDuplicate?: boolean; // If true, this is NOT the best photo in the group
 

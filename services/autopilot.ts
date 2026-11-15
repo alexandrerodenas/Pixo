@@ -1,10 +1,11 @@
 import type { Photo } from './types.ts';
 import { PhotoStatus } from './types.ts';
+import { train, predict, projectEmbedding, embeddingWeights, emptyModel, VISUAL, type Model, type Quality, type TrainingRow } from './autopilotModel.ts';
 
 // Autopilot: learns from the user's decisions (photos deleted vs photos kept) which photos they
 // usually throw away, and proposes them for selection. Everything stays on the device: decisions
-// are stored in IndexedDB and a small logistic regression is retrained in a few milliseconds after
-// each change. It never deletes anything itself, it only selects, like the manual rules.
+// are stored in IndexedDB and a small model (services/autopilotModel.ts) is retrained in a worker
+// after each change. It never deletes anything itself, it only selects, like the manual rules.
 
 export type DecisionSource = 'delete' | 'keep' | 'correction';
 
@@ -13,6 +14,7 @@ export interface AutopilotExample {
   label: 0 | 1; // 1: the user deleted it, 0: the user kept it
   source: DecisionSource;
   features: Record<string, number>;
+  vec?: Float32Array; // what the photo looks like: its embedding, projected (absent before v1.21)
   at: number;
 }
 
@@ -30,6 +32,10 @@ export interface AutopilotState {
   deleted: number;
   kept: number;
   ready: boolean; // enough examples of both kinds to make proposals
+  /** The model predicts decisions it has not seen well enough to make proposals */
+  reliable: boolean;
+  /** Self-check on past decisions (see autopilotModel.ts), null before the first training */
+  quality: Quality | null;
   rules: LearnedRule[];
   trainedAt?: number;
 }
@@ -46,6 +52,11 @@ const MAX_EXAMPLES = 5000;
 const MIN_RULE_SUPPORT = 3;
 const RULE_WEIGHT = 0.5;
 const MAX_RULES = 30;
+// Below this, the model orders deleted and kept photos hardly better than chance: it stays quiet
+export const MIN_AUC = 0.65;
+// Taking a photo out of a selection is a deliberate "you are wrong": it counts double
+const CORRECTION_WEIGHT = 2;
+const BLUR_FULL_AT = Math.log(1 + 1000);
 
 // --- Features -------------------------------------------------------------------------------
 
@@ -65,6 +76,9 @@ export function extractFeatures(photo: Photo, now: number = Date.now()): Record<
   if (photo.customLabel) put(`custom:${slug(photo.customLabel)}`);
 
   if (photo.blurLevel) put(`blur:${photo.blurLevel}`);
+  // The levels above move with the thresholds of the profile; this one is the measure itself
+  // (0: very sharp, 1: no detail at all), so "a bit too soft for me" can be learned
+  if (photo.blurRaw !== undefined) put('n:blur', 1 - Math.min(1, Math.log(1 + Math.max(0, photo.blurRaw)) / BLUR_FULL_AT));
   if (photo.isDuplicate) put('dup:redundant');
   else if (photo.duplicateGroupId) put('dup:best');
 
@@ -105,72 +119,15 @@ export function extractFeatures(photo: Photo, now: number = Date.now()): Record<
 
 // --- Model ----------------------------------------------------------------------------------
 
-interface Model {
-  bias: number;
-  weights: Map<string, number>;
-}
-
-const sigmoid = (z: number) => 1 / (1 + Math.exp(-z));
-
-/**
- * Logistic regression trained by full-batch gradient descent with L2 regularisation.
- * Classes are re-weighted so that a user who deletes a lot does not bias every proposal.
- */
-export function train(examples: AutopilotExample[], ignored: Set<string> = new Set(),
-                      // fewer passes on large histories, so retraining stays around 200 ms on a phone
-                      iterations = Math.round(Math.min(300, Math.max(80, 300_000 / Math.max(1, examples.length))))): Model {
-  const weights = new Map<string, number>();
-  let bias = 0;
-  if (examples.length === 0) return { bias, weights };
-  const positives = examples.filter(e => e.label === 1).length;
-  const negatives = examples.length - positives;
-  const wPos = positives ? examples.length / (2 * positives) : 1;
-  const wNeg = negatives ? examples.length / (2 * negatives) : 1;
-  const rows = examples.map(e => ({
-    y: e.label,
-    w: e.label === 1 ? wPos : wNeg,
-    x: Object.entries(e.features).filter(([k]) => !ignored.has(k)),
-  }));
-  for (const r of rows) for (const [k] of r.x) weights.set(k, 0);
-
-  const lr = 0.5;
-  const l2 = 0.02;
-  const n = rows.length;
-  const grad = new Map<string, number>();
-  for (let it = 0; it < iterations; it++) {
-    grad.clear();
-    let gBias = 0;
-    for (const r of rows) {
-      let z = bias;
-      for (const [k, v] of r.x) z += weights.get(k)! * v;
-      const err = (sigmoid(z) - r.y) * r.w;
-      gBias += err;
-      for (const [k, v] of r.x) grad.set(k, (grad.get(k) ?? 0) + err * v);
-    }
-    bias -= lr * gBias / n;
-    for (const [k, w] of weights) weights.set(k, w - lr * ((grad.get(k) ?? 0) / n + l2 * w));
-  }
-  return { bias, weights };
-}
-
-export function predict(model: Model, features: Record<string, number>, ignored: Set<string> = new Set()): { probability: number; contributions: [string, number][] } {
-  let z = model.bias;
-  const contributions: [string, number][] = [];
-  for (const [k, v] of Object.entries(features)) {
-    if (ignored.has(k)) continue;
-    const w = model.weights.get(k);
-    if (w === undefined) continue;
-    z += w * v;
-    contributions.push([k, w * v]);
-  }
-  contributions.sort((a, b) => b[1] - a[1]);
-  return { probability: sigmoid(z), contributions };
-}
+const toRow = (e: AutopilotExample): TrainingRow =>
+  ({ label: e.label, weight: e.source === 'correction' ? CORRECTION_WEIGHT : 1, features: e.features, vec: e.vec });
 
 /** The strongest weights, with how often the user deleted or kept photos having them. */
 export function learnedRules(model: Model, examples: AutopilotExample[]): LearnedRule[] {
   const counts = new Map<string, { deleted: number; kept: number }>();
+  const visual = { deleted: 0, kept: 0 };
   for (const e of examples) {
+    if (e.vec) { if (e.label === 1) visual.deleted++; else visual.kept++; }
     for (const [k, v] of Object.entries(e.features)) {
       if (v < 0.2) continue; // a label predicted with a very low score says little
       const c = counts.get(k) ?? { deleted: 0, kept: 0 };
@@ -179,19 +136,61 @@ export function learnedRules(model: Model, examples: AutopilotExample[]): Learne
     }
   }
   const rules: LearnedRule[] = [];
-  for (const [feature, weight] of model.weights) {
+  for (const [feature, raw] of model.weights) {
+    const weight = raw * model.calibration.a;
     const c = counts.get(feature);
-    if (!c || c.deleted + c.kept < MIN_RULE_SUPPORT || Math.abs(weight) < RULE_WEIGHT) continue;
+    if (feature.startsWith('n:') || !c || c.deleted + c.kept < MIN_RULE_SUPPORT || Math.abs(weight) < RULE_WEIGHT) continue;
     const action = weight > 0 ? 'delete' : 'keep';
     const agree = action === 'delete' ? c.deleted : c.kept;
     if (agree / (c.deleted + c.kept) < 0.6) continue;
     rules.push({ feature, weight, action, ...c });
   }
-  return rules.sort((a, b) => Math.abs(b.weight) - Math.abs(a.weight)).slice(0, MAX_RULES);
+  rules.sort((a, b) => Math.abs(b.weight) - Math.abs(a.weight));
+  // What photos look like is not a rule one can read, but it is listed so it can be turned off
+  if (model.visual) rules.unshift({ feature: VISUAL, weight: 0, action: 'delete', ...visual });
+  return rules.slice(0, MAX_RULES);
 }
 
 export const isReady = (deleted: number, kept: number) =>
   deleted + kept >= MIN_EXAMPLES && deleted >= MIN_PER_CLASS && kept >= MIN_PER_CLASS;
+
+// Training runs in a worker (a few hundred ms on a phone with a long history); without workers,
+// or if it fails to start, it runs here.
+type Trained = ReturnType<typeof train>;
+let worker: Worker | null | undefined;
+let jobId = 0;
+const jobs = new Map<number, { rows: TrainingRow[]; ignored: Set<string>; resolve: (t: Trained) => void }>();
+
+function trainInWorker(rows: TrainingRow[], ignored: Set<string>): Promise<Trained> {
+  if (worker === undefined) {
+    worker = null;
+    if (typeof Worker !== 'undefined') {
+      try {
+        const created = new Worker(new URL('../workers/autopilot.worker.ts', import.meta.url), { type: 'module' });
+        const runHere = () => {
+          worker = null;
+          created.terminate();
+          for (const job of jobs.values()) job.resolve(train(job.rows, { ignored: job.ignored }));
+          jobs.clear();
+        };
+        created.onmessage = (event: MessageEvent) => {
+          const job = jobs.get(event.data.id);
+          if (event.data.error || !job) return event.data.error ? runHere() : undefined;
+          jobs.delete(event.data.id);
+          job.resolve({ model: event.data.model, quality: event.data.quality });
+        };
+        created.onerror = runHere;
+        worker = created;
+      } catch { /* trained on this thread */ }
+    }
+  }
+  if (!worker) return Promise.resolve(train(rows, { ignored }));
+  return new Promise(resolve => {
+    const id = ++jobId;
+    jobs.set(id, { rows, ignored, resolve });
+    worker!.postMessage({ id, rows, ignored });
+  });
+}
 
 // --- Store (IndexedDB) and live state ------------------------------------------------------
 
@@ -199,8 +198,10 @@ const DB_NAME = 'pixo-autopilot';
 const STORE = 'examples';
 const examples = new Map<string, AutopilotExample>();
 let ignoredFeatures = new Set<string>();
-let model: Model = { bias: 0, weights: new Map() };
-let state: AutopilotState = { loaded: false, total: 0, deleted: 0, kept: 0, ready: false, rules: [] };
+let model: Model = emptyModel();
+const fastVisual = new Map<number, Float32Array | null>(); // the model's visual weights, per embedding length
+let trainings = 0;
+let state: AutopilotState = { loaded: false, total: 0, deleted: 0, kept: 0, ready: false, reliable: false, quality: null, rules: [] };
 const listeners = new Set<() => void>();
 let dbPromise: Promise<IDBDatabase> | null = null;
 let trainTimer: ReturnType<typeof setTimeout> | null = null;
@@ -237,18 +238,26 @@ function emit() {
   listeners.forEach(l => l());
 }
 
-function retrain() {
+async function retrain() {
   trainTimer = null;
-  const all = [...examples.values()];
+  const run = ++trainings;
+  const all = [...examples.values()].sort((a, b) => a.at - b.at);
+  const ignored = ignoredFeatures;
+  const trained = await trainInWorker(all.map(toRow), ignored);
+  if (run !== trainings) return; // a more recent training is on its way
   const deleted = all.filter(e => e.label === 1).length;
-  model = train(all, ignoredFeatures);
+  const ready = isReady(deleted, all.length - deleted);
+  model = trained.model;
+  fastVisual.clear();
   state = {
     loaded: true,
     total: all.length,
     deleted,
     kept: all.length - deleted,
-    ready: isReady(deleted, all.length - deleted),
-    rules: learnedRules(model, all).filter(r => !ignoredFeatures.has(r.feature)),
+    ready,
+    reliable: ready && trained.quality.tested > 0 && trained.quality.auc >= MIN_AUC,
+    quality: trained.quality,
+    rules: learnedRules(model, all).filter(r => !ignored.has(r.feature)),
     trainedAt: Date.now(),
   };
   emit();
@@ -275,7 +284,7 @@ export function initAutopilot(): Promise<void> {
     } catch (error) {
       console.warn('Autopilot: stored decisions unavailable', error);
     }
-    retrain();
+    await retrain();
   })();
   return loadPromise;
 }
@@ -288,7 +297,8 @@ export function recordDecisions(photos: Photo[], source: DecisionSource) {
   const put: AutopilotExample[] = [];
   for (const p of photos) {
     if (!canLearnFrom(p)) continue;
-    const e: AutopilotExample = { id: p.id, label: source === 'delete' ? 1 : 0, source, features: extractFeatures(p, now), at: now };
+    const vec = p.embedding ? projectEmbedding(p.embedding) : undefined;
+    const e: AutopilotExample = { id: p.id, label: source === 'delete' ? 1 : 0, source, features: extractFeatures(p, now), ...(vec ? { vec } : {}), at: now };
     examples.set(p.id, e);
     put.push(e);
   }
@@ -315,7 +325,7 @@ export async function resetAutopilot() {
   const remove = [...examples.keys()];
   examples.clear();
   await write([], remove);
-  retrain();
+  await retrain();
 }
 
 export function setIgnoredFeatures(features: string[] = []) {
@@ -325,17 +335,36 @@ export function setIgnoredFeatures(features: string[] = []) {
   if (state.loaded) scheduleRetrain();
 }
 
+/** The visual part of the score, straight from the photo's embedding (see embeddingWeights). */
+function visualOf(photo: Photo): number {
+  const embedding = photo.embedding;
+  if (!model.visual || !embedding?.length) return 0;
+  let weights = fastVisual.get(embedding.length);
+  if (weights === undefined) fastVisual.set(embedding.length, weights = embeddingWeights(model, embedding.length));
+  if (!weights) return 0;
+  let dot = 0, squares = 0;
+  for (let i = 0; i < embedding.length; i++) { dot += weights[i] * embedding[i]; squares += embedding[i] * embedding[i]; }
+  return squares > 0 ? dot / Math.sqrt(squares) - model.visualOffset : 0;
+}
+
 /**
- * Whether the autopilot would select this photo: ready, not kept by the user, and a probability
- * of deletion at or above the threshold (0-100).
+ * Whether the autopilot would select this photo: ready and reliable, not kept by the user, and a
+ * probability of deletion at or above the threshold (0-100).
  */
 export function autopilotMatch(photo: Photo, threshold: number = DEFAULT_THRESHOLD): AutopilotMatch | null {
-  if (!state.ready || photo.isSaved || photo.status !== PhotoStatus.ANALYZED) return null;
+  if (!state.reliable || photo.isSaved || photo.status !== PhotoStatus.ANALYZED) return null;
   if (examples.get(photo.id)?.label === 0) return null; // the user already said to keep it
-  const { probability, contributions } = predict(model, extractFeatures(photo), ignoredFeatures);
+  const { probability, contributions } = predict(model, extractFeatures(photo), visualOf(photo));
   const score = Math.round(probability * 100);
   if (score < threshold) return null;
   return { score, features: contributions.filter(([, c]) => c > 0.1).slice(0, 3).map(([k]) => k) };
+}
+
+/** For a threshold, what the self-check says the autopilot would have proposed among past decisions. */
+export function backtest(quality: Quality, threshold: number): { deleted: number; kept: number; recall: number } {
+  const t = Math.min(100, Math.max(0, Math.round(threshold)));
+  const deleted = quality.deletedAbove[t];
+  return { deleted, kept: quality.keptAbove[t], recall: quality.deletedAbove[0] ? deleted / quality.deletedAbove[0] : 0 };
 }
 
 export const getAutopilotState = () => state;

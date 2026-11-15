@@ -2,7 +2,8 @@ import React from 'react';
 import type { UserProfile } from '../services/types.ts';
 import { Sparkles, Trash2, Heart, EyeOff, Eye, Wand2, RotateCcw } from 'lucide-react';
 import { useAutopilot } from '../hooks/useAutopilot.ts';
-import { DEFAULT_THRESHOLD, MIN_EXAMPLES, MIN_PER_CLASS, resetAutopilot } from '../services/autopilot.ts';
+import { DEFAULT_THRESHOLD, MIN_EXAMPLES, MIN_PER_CLASS, resetAutopilot, backtest } from '../services/autopilot.ts';
+import { VISUAL } from '../services/autopilotModel.ts';
 import { describeFeature, featureToRule } from '../services/autopilotLabels.ts';
 import { t } from '../services/i18n.ts';
 
@@ -16,6 +17,7 @@ export const AutopilotManager: React.FC<AutopilotManagerProps> = ({ profile, set
   const ignored = profile.autopilotIgnored ?? [];
   const threshold = profile.autopilotThreshold ?? DEFAULT_THRESHOLD;
   const rules = state.rules.filter(r => !ignored.includes(r.feature));
+  const check = state.reliable && state.quality ? backtest(state.quality, threshold) : null;
 
   const hasManualRule = (feature: string) => {
     const rule = featureToRule(feature);
@@ -53,7 +55,8 @@ export const AutopilotManager: React.FC<AutopilotManagerProps> = ({ profile, set
         <div className="p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg text-sm space-y-1">
           <p>{t('ap.stats', { total: state.total, deleted: state.deleted, kept: state.kept })}</p>
           <p className="text-gray-600 dark:text-gray-400">
-            {state.ready ? t('ap.ready') : t('ap.notReady', { min: MIN_EXAMPLES, perClass: MIN_PER_CLASS })}
+            {!state.ready ? t('ap.notReady', { min: MIN_EXAMPLES, perClass: MIN_PER_CLASS })
+              : state.reliable ? t('ap.ready') : t('ap.unreliable', { tested: state.quality?.tested ?? 0 })}
           </p>
         </div>
         <div className={profile.autopilot ? '' : 'opacity-50'}>
@@ -62,6 +65,13 @@ export const AutopilotManager: React.FC<AutopilotManagerProps> = ({ profile, set
             onChange={e => setProfile(p => ({ ...p, autopilotThreshold: parseInt(e.target.value) }))}
             className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-600 disabled:cursor-not-allowed" />
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t('ap.thresholdHint')}</p>
+          {check && state.quality && (
+            <p className="text-xs text-gray-600 dark:text-gray-300 mt-2 p-2 bg-gray-50 dark:bg-gray-900/50 rounded-md">
+              {check.deleted + check.kept === 0
+                ? t('ap.backtestNone', { tested: state.quality.tested })
+                : t('ap.backtest', { tested: state.quality.tested, proposed: check.deleted + check.kept, deleted: check.deleted, kept: check.kept, recall: Math.round(check.recall * 100) })}
+            </p>
+          )}
         </div>
       </div>
 
@@ -77,7 +87,7 @@ export const AutopilotManager: React.FC<AutopilotManagerProps> = ({ profile, set
               </span>
               <div className="min-w-0 flex-1">
                 <p className="font-medium truncate">{describeFeature(rule.feature)}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">{t('ap.evidence', { deleted: rule.deleted, kept: rule.kept })}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">{t(rule.feature === VISUAL ? 'ap.visualEvidence' : 'ap.evidence', { deleted: rule.deleted, kept: rule.kept })}</p>
               </div>
               {rule.action === 'delete' && featureToRule(rule.feature) && (
                 hasManualRule(rule.feature)
