@@ -194,6 +194,7 @@ const PhotoSorter: React.FC<PhotoSorterProps> = ({ userProfile, onProfileUpdate 
                 modelsLoadState={modelsLoadState}
                 tfBackend={tfBackend}
                 processingQueueCount={processingQueueCount}
+                faceProgress={people.enabled ? people.progress : null}
             />
         )}
 

@@ -3,6 +3,7 @@ import type { ModelsLoadState } from '../services/types.ts';
 import { ChevronDown, Activity, Image as ImageIcon, CheckSquare, Heart, AlertCircle, CheckCircle2, Loader } from 'lucide-react';
 import { subscribeClipStats, type ClipStats } from '../services/clipClient.ts';
 import { t } from '../services/i18n.ts';
+import { FaceProgressBar } from './PeopleModal.tsx';
 
 interface FloatingHUDProps {
   totalCount: number;
@@ -12,6 +13,7 @@ interface FloatingHUDProps {
   modelsLoadState: ModelsLoadState;
   tfBackend: string | null;
   processingQueueCount: number;
+  faceProgress?: { done: number; total: number; loadingModel: boolean } | null; // people recognition, when on
 }
 
 const isSmallScreen = () => typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches;
@@ -23,7 +25,8 @@ const FloatingHUD: React.FC<FloatingHUDProps> = ({
                                                    statusMessage,
                                                    modelsLoadState,
                                                    tfBackend,
-                                                   processingQueueCount
+                                                   processingQueueCount,
+                                                   faceProgress
                                                  }) => {
   // Phones start with the compact pill: the full card covers a good part of the photos
   const [isExpanded, setIsExpanded] = useState(() => !isSmallScreen());
@@ -36,6 +39,10 @@ const FloatingHUD: React.FC<FloatingHUDProps> = ({
   const isProcessing = processingQueueCount > 0;
   const done = Math.max(0, totalCount - processingQueueCount);
   const percent = totalCount > 0 ? Math.round((done / totalCount) * 100) : 0;
+
+  // Face search runs in the background, after the regular analysis: shown while photos are left
+  const facesRunning = !!faceProgress && (faceProgress.loadingModel || faceProgress.total > faceProgress.done);
+  const facePercent = faceProgress && faceProgress.total > 0 ? Math.round((faceProgress.done / faceProgress.total) * 100) : 0;
 
   const clipPercent = Math.round((clip.progress ?? 0) * 100);
   const clipLine = clip.error ? t('hud.clipError')
@@ -60,12 +67,13 @@ const FloatingHUD: React.FC<FloatingHUDProps> = ({
               className={`w-full flex items-center justify-between gap-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors ${isExpanded ? 'p-3' : 'py-2 pl-3 pr-4'}`}
           >
             <div className="flex items-center gap-2 font-bold text-sm text-gray-800 dark:text-gray-100">
-              {isProcessing ? <Loader className="w-4 h-4 text-primary animate-spin" /> : <Activity className="w-4 h-4 text-primary" />}
+              {isProcessing || facesRunning ? <Loader className="w-4 h-4 text-primary animate-spin" /> : <Activity className="w-4 h-4 text-primary" />}
               {isExpanded
                   ? <span>{t('hud.title')}</span>
                   : <span className="font-mono text-xs">
                       {isProcessing ? `${percent} %` : totalCount}
                       {clip.phase && ` · CLIP ${clipPercent} %`}
+                      {facesRunning && ` · ${t('hud.faces')} ${faceProgress!.loadingModel ? '…' : `${facePercent} %`}`}
                     </span>}
             </div>
             {isExpanded && <ChevronDown className="w-4 h-4 text-gray-400" />}
@@ -88,6 +96,12 @@ const FloatingHUD: React.FC<FloatingHUDProps> = ({
                       <div className="h-1.5 rounded-full bg-blue-200 dark:bg-blue-900/60 overflow-hidden">
                         <div className="h-full bg-blue-500 transition-all duration-300" style={{ width: `${percent}%` }} />
                       </div>
+                    </div>
+                )}
+
+                {facesRunning && (
+                    <div className="text-teal-800 dark:text-teal-200 bg-teal-50 dark:bg-teal-900/20 p-2 rounded-md">
+                      <FaceProgressBar progress={faceProgress!} compact />
                     </div>
                 )}
 

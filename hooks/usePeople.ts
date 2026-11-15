@@ -14,7 +14,8 @@ export type VisiblePerson = Person & { faces: FaceRecord[] };
 export interface PeopleState {
   enabled: boolean;
   people: VisiblePerson[];
-  progress: { done: number; total: number };
+  /** Photos already looked at, among the analysed ones; loadingModel while the face model downloads */
+  progress: { done: number; total: number; loadingModel: boolean };
   error?: string;
   faceUrl: (face: FaceRecord) => string | undefined;
   photoIdsOf: (personId: string) => Set<string>;
@@ -38,7 +39,8 @@ export function usePeople(photos: Map<string, Photo>, enabled: boolean): PeopleS
 
   const [ready, setReady] = useState(false);
   const [version, setVersion] = useState(0);
-  const [progress, setProgress] = useState({ done: 0, total: 0 });
+  const [loadingModel, setLoadingModel] = useState(false);
+  const modelReadyRef = useRef(false);
   const [error, setError] = useState<string>();
   const bump = useCallback(() => setVersion(v => v + 1), []);
 
@@ -52,6 +54,7 @@ export function usePeople(photos: Map<string, Photo>, enabled: boolean): PeopleS
     if (!enabled) {
       stopFaceWorker();
       indexRef.current = null;
+      modelReadyRef.current = false;
       setReady(false);
       return;
     }
@@ -94,16 +97,16 @@ export function usePeople(photos: Map<string, Photo>, enabled: boolean): PeopleS
   const run = useCallback(async () => {
     if (busyRef.current) return;
     busyRef.current = true;
-    let done = 0;
     try {
       while (indexRef.current) {
-        const pending = [...photosRef.current.values()].filter(needsScan);
-        setProgress({ done, total: done + pending.length });
-        const photo = pending[0];
+        let photo: Photo | undefined;
+        for (const p of photosRef.current.values()) if (needsScan(p)) { photo = p; break; }
         if (!photo) break;
         try {
           const blob = await (await fetch(photo.objectURL)).blob();
-          const faces = await detectFaces(photo.id, blob);
+          if (!modelReadyRef.current) setLoadingModel(true);
+          const faces = await detectFaces(photo.id, blob).finally(() => setLoadingModel(false));
+          modelReadyRef.current = true;
           const index = indexRef.current;
           if (!index) break;
           index.setPhotoFaces(photo.id, faces.map(f => ({
@@ -121,8 +124,8 @@ export function usePeople(photos: Map<string, Photo>, enabled: boolean): PeopleS
             break;
           }
           failedRef.current.add(photo.id);
+          bump();
         }
-        done++;
       }
     } finally {
       busyRef.current = false;
@@ -132,6 +135,18 @@ export function usePeople(photos: Map<string, Photo>, enabled: boolean): PeopleS
   useEffect(() => {
     if (enabled && ready) run();
   }, [photos, enabled, ready, run]);
+
+  const progress = useMemo(() => {
+    let done = 0, total = 0;
+    if (indexRef.current) {
+      for (const p of photos.values()) {
+        if (!isFinished(p)) continue;
+        total++;
+        if (!needsScan(p)) done++;
+      }
+    }
+    return { done, total, loadingModel };
+  }, [photos, version, loadingModel, needsScan]);
 
   const people = useMemo(() => {
     const index = indexRef.current;
@@ -168,12 +183,12 @@ export function usePeople(photos: Map<string, Photo>, enabled: boolean): PeopleS
 
   const clearAll = useCallback(async () => {
     stopFaceWorker();
+    modelReadyRef.current = false;
     await clearFaceData();
     revokeUrls();
     scansRef.current.clear();
     failedRef.current.clear();
     indexRef.current = enabled ? new FaceIndex() : null;
-    setProgress({ done: 0, total: 0 });
     bump();
     if (enabled) run();
   }, [enabled, bump, run]);

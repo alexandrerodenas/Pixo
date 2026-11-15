@@ -12,6 +12,22 @@ interface PeopleModalProps {
   onShowPerson: (personId: string) => void;
 }
 
+/** Face search progress: a bar, indeterminate while the model downloads. Also used in the stats widget. */
+export const FaceProgressBar: React.FC<{ progress: PeopleState['progress']; compact?: boolean }> = ({ progress, compact }) => {
+  const percent = progress.total > 0 ? Math.round((progress.done / progress.total) * 100) : 0;
+  return (
+    <div className={compact ? 'space-y-1.5' : 'space-y-2'}>
+      <div className="flex items-center justify-between gap-2 text-xs">
+        <span>{progress.loadingModel ? t('people.loadingModel') : t('people.progress', { done: progress.done, total: progress.total })}</span>
+        {!progress.loadingModel && <span className="font-bold">{percent} %</span>}
+      </div>
+      <div className="h-1.5 rounded-full bg-teal-200 dark:bg-teal-900/60 overflow-hidden" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress.loadingModel ? undefined : percent}>
+        <div className={`h-full bg-teal-500 transition-all duration-300 ${progress.loadingModel ? 'w-1/3 animate-pulse' : ''}`} style={progress.loadingModel ? undefined : { width: `${percent}%` }} />
+      </div>
+    </div>
+  );
+};
+
 const nameOf = (person: VisiblePerson) => displayName(person, t('people.default'));
 
 const Avatar: React.FC<{ url?: string; className?: string }> = ({ url, className = 'w-20 h-20' }) => (
@@ -79,7 +95,15 @@ const PeopleModal: React.FC<PeopleModalProps> = ({ isOpen, onClose, people, onTo
 
           {people.enabled && !open && (
             <>
-              {total > done && <p className="text-sm text-gray-500 dark:text-gray-400">{t('people.progress', { done, total })}</p>}
+              {(total > done || people.progress.loadingModel) && (
+                <div className="p-3 rounded-lg bg-teal-50 dark:bg-teal-900/20 text-teal-800 dark:text-teal-200 space-y-2">
+                  <FaceProgressBar progress={people.progress} />
+                  <p className="text-xs">{t('people.background')}</p>
+                  <button onClick={() => { commitName(); onClose(); }} className="px-3 py-1.5 rounded-md bg-teal-600 text-white text-sm font-semibold hover:bg-teal-700 transition">
+                    {t('people.keepSorting')}
+                  </button>
+                </div>
+              )}
               {people.error && <p className="text-sm text-red-600 dark:text-red-400">{t('people.error', { error: people.error })}</p>}
               {people.people.length === 0 ? (
                 <p className="text-sm text-gray-500 dark:text-gray-400 py-8 text-center">{t('people.empty')}</p>
