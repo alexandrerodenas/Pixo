@@ -4,6 +4,8 @@ import { messages } from './messages.ts';
 const FIXED: Record<string, MessageKey> = {
   'd:none': 'ap.f.noObject',
   'uncategorized': 'ap.f.uncategorized',
+  'vis:similar': 'ap.f.visual',
+  'n:blur': 'ap.f.softness',
   'blur:blurry': 'ap.f.blurry',
   'blur:ok': 'ap.f.ok',
   'blur:sharp': 'ap.f.sharp',
