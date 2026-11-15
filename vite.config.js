@@ -3,13 +3,15 @@ import { defineConfig } from 'vite'
 // Content-Security-Policy for the production build. The page holds read/write access to the
 // user's photo folder, so only our own scripts may run. Keep in sync with security-headers.inc
 // (nginx) and vercel.json, which also send frame-ancestors (not allowed in a <meta> tag).
-// Model weights are downloaded from TF Hub (redirects to Kaggle) and Google Cloud Storage.
+// Model weights are downloaded from TF Hub (redirects to Kaggle) and Google Cloud Storage (MobileNet),
+// and from Hugging Face (CLIP), whose large files redirect to its Xet storage on *.hf.co
+// (cas-bridge.xethub.hf.co): without that host, every CLIP download fails with "Failed to fetch".
 export const CONTENT_SECURITY_POLICY = [
   "default-src 'self'",
   "script-src 'self' 'wasm-unsafe-eval' https://cdn.jsdelivr.net",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' blob: data:",
-  "connect-src 'self' blob: https://tfhub.dev https://www.kaggle.com https://storage.googleapis.com https://huggingface.co https://*.huggingface.co https://cdn.jsdelivr.net",
+  "connect-src 'self' blob: https://tfhub.dev https://www.kaggle.com https://storage.googleapis.com https://huggingface.co https://*.huggingface.co https://*.hf.co https://cdn.jsdelivr.net",
   "worker-src 'self' blob:",
   "object-src 'none'",
   "base-uri 'none'",
